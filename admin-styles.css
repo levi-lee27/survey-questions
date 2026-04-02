@@ -555,3 +555,82 @@ body {
     align-items: stretch;
   }
 }
+/* 认证面板 */
+.auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+}
+
+.auth-panel .card {
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.auth-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.auth-panel .form-group {
+  margin-bottom: 24px;
+}
+
+.auth-panel .error-msg {
+  margin-top: 16px;
+  padding: 12px;
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 8px;
+  color: #ff4d4f;
+  font-size: 14px;
+  display: none;
+}
+
+.survey-id-display {
+  margin-top: 8px;
+  color: #999;
+  font-size: 13px;
+}
+
+/* 按钮样式 */
+.btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* 状态标签 */
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #f0f0f0;
+  color: #666;
+  border-radius: 4px;
+  font-size: 11px;
+  margin-left: 8px;
+}
+
+.badge.locked {
+  background: #ffccc7;
+  color: #ff4d4f;
+}
+
+.badge.unlocked {
+  background: #d9f7be;
+  color: #52c41a;
+}

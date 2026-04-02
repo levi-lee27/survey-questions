@@ -1,43 +1,89 @@
-// 问卷配置（需与问卷页一致）
-const CONFIG = {
-  questions: [
-    {
-      id: 1,
-      number: '①',
-      text: '业务场景(正常、异常)覆盖完整全面',
-      weight: 0.4
-    },
-    {
-      id: 2,
-      number: '②',
-      text: '大纲覆盖需求规则逻辑、账务全面准确',
-      weight: 0.4
-    },
-    {
-      id: 3,
-      number: '③',
-      text: '大纲编写不冗余，描述精炼、准确',
-      weight: 0.2
-    }
-  ]
-}
+// 问卷配置（固定）
+const QUESTIONS = [
+  { id: 1, number: '①', text: '业务场景(正常、异常)覆盖完整全面', weight: 0.4 },
+  { id: 2, number: '②', text: '大纲覆盖需求规则逻辑、账务全面准确', weight: 0.4 },
+  { id: 3, number: '③', text: '大纲编写不冗余，描述精炼、准确', weight: 0.2 }
+]
 
 // 全局状态
+let currentSurveyId = ''
+let currentToken = ''
 let allRecords = []
 let filteredRecords = []
 let currentPage = 1
 const pageSize = 10
 
-// 初始化
-function init() {
+// 获取 URL 参数
+function getUrlParam(name) {
+  const params = new URLSearchParams(window.location.search)
+  return params.get(name)
+}
+
+// 显示面板
+function showPanel(panel) {
+  document.getElementById('authPanel').style.display = panel === 'auth' ? 'block' : 'none'
+  document.getElementById('statsPanel').style.display = panel === 'stats' ? 'block' : 'none'
+}
+
+// 验证 Token
+function verifyToken() {
+  const token = document.getElementById('adminToken').value.trim()
+  const surveyId = getUrlParam('surveyId')
+
+  if (!surveyId) {
+    showError('缺少 surveyId 参数')
+    return
+  }
+
+  if (!token) {
+    showError('请输入管理员密码')
+    return
+  }
+
+  // 检查 meta 中的密码
+  const metaKey = 'survey_meta_' + surveyId
+  const metaRaw = localStorage.getItem(metaKey)
+  if (!metaRaw) {
+    showError('问卷不存在或尚未创建')
+    return
+  }
+
+  const meta = JSON.parse(metaRaw)
+
+  // 如果有密码保护，验证密码
+  if (meta.password && meta.password !== token) {
+    showError('密码错误')
+    return
+  }
+
+  // 验证通过
+  currentSurveyId = surveyId
+  currentToken = token
+
+  // 保存 meta 信息
+  document.getElementById('surveyTitleDisplay').textContent = meta.title || '未命名问卷'
+  document.getElementById('surveyIdDisplay').textContent = surveyId
+
+  showPanel('stats')
   loadData()
-  setupEventListeners()
+}
+
+// 显示错误
+function showError(msg) {
+  const el = document.getElementById('authError')
+  if (el) {
+    el.textContent = msg
+    el.style.display = 'block'
+  } else {
+    alert(msg)
+  }
 }
 
 // 加载数据
 function loadData() {
   try {
-    const stored = localStorage.getItem('survey_results')
+    const key = 'survey_results_' + currentSurveyId
+    const stored = localStorage.getItem(key)
     allRecords = stored ? JSON.parse(stored) : []
     filteredRecords = [...allRecords]
     renderAll()
@@ -49,14 +95,27 @@ function loadData() {
   }
 }
 
-// 设置事件监听
-function setupEventListeners() {
-  const searchInput = document.getElementById('searchInput')
-  const sortSelect = document.getElementById('sortSelect')
+// 监听筛选事件
+document.addEventListener('DOMContentLoaded', () => {
+  const surveyId = getUrlParam('surveyId')
+  if (!surveyId) {
+    showPanel('auth')
+    return
+  }
 
-  searchInput.addEventListener('input', debounce(handleFilter, 300))
-  sortSelect.addEventListener('change', handleFilter)
-}
+  // 如果有 token 参数，直接验证
+  const token = getUrlParam('token')
+  if (token) {
+    document.getElementById('adminToken').value = token
+    setTimeout(() => verifyToken(), 100)
+  } else {
+    showPanel('auth')
+  }
+
+  // 绑定筛选事件
+  document.getElementById('searchInput')?.addEventListener('input', debounce(handleFilter, 300))
+  document.getElementById('sortSelect')?.addEventListener('change', handleFilter)
+})
 
 // 防抖
 function debounce(fn, delay) {
@@ -69,8 +128,8 @@ function debounce(fn, delay) {
 
 // 处理筛选
 function handleFilter() {
-  const searchText = document.getElementById('searchInput').value.toLowerCase()
-  const sortBy = document.getElementById('sortSelect').value
+  const searchText = document.getElementById('searchInput')?.value.toLowerCase() || ''
+  const sortBy = document.getElementById('sortSelect')?.value || 'time-desc'
 
   filteredRecords = allRecords.filter(record => {
     if (!searchText) return true
@@ -132,7 +191,7 @@ function renderQuestionStats() {
     return
   }
 
-  const stats = CONFIG.questions.map(q => {
+  const stats = QUESTIONS.map(q => {
     let sum = 0
     allRecords.forEach(record => {
       if (record.answers[q.id] !== undefined) {
@@ -230,7 +289,7 @@ function renderPagination(totalPages) {
 
   let html = ''
 
-  html += `<button class="page-btn" onclick="goToPage(${1})" ${currentPage === 1 ? 'disabled' : ''}>首页</button>`
+  html += `<button class="page-btn" onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''}>首页</button>`
   html += `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>`
 
   const startPage = Math.max(1, currentPage - 2)
@@ -254,7 +313,7 @@ function goToPage(page) {
   renderRecords()
 }
 
-// 格式化日期时间
+// 格式化时间
 function formatDateTime(isoString) {
   const date = new Date(isoString)
   const y = date.getFullYear()
@@ -266,7 +325,7 @@ function formatDateTime(isoString) {
   return `${y}-${m}-${d} ${h}:${min}:${s}`
 }
 
-// HTML 转义防 XSS
+// HTML 转义
 function escapeHtml(text) {
   const div = document.createElement('div')
   div.textContent = text
@@ -281,7 +340,7 @@ function exportCSV() {
   }
 
   const headers = ['ID', '提交时间', '总分']
-  CONFIG.questions.forEach(q => {
+  QUESTIONS.forEach(q => {
     headers.push(`问题${q.number}原始分`)
     headers.push(`问题${q.number}加权分`)
   })
@@ -294,7 +353,7 @@ function exportCSV() {
       record.totalScore.toFixed(2)
     ]
 
-    CONFIG.questions.forEach(q => {
+    QUESTIONS.forEach(q => {
       const raw = record.answers[q.id] || ''
       const weighted = raw ? (raw * q.weight).toFixed(2) : ''
       row.push(raw, weighted)
@@ -311,53 +370,50 @@ function exportCSV() {
 
   const a = document.createElement('a')
   a.href = url
-  a.download = `问卷数据_${new Date().toISOString().split('T')[0]}.csv`
+  a.download = `问卷数据_${currentSurveyId}_${new Date().toISOString().split('T')[0]}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
 
-// 清空所有数据
+// 清空数据
 function clearAllData() {
-  showModal('确认清空', '确定要清空所有问卷数据吗？此操作不可恢复。', () => {
-    localStorage.removeItem('survey_results')
+  showModal('确认清空', '确定要清空当前问卷的所有数据吗？此操作不可恢复。', () => {
+    const key = 'survey_results_' + currentSurveyId
+    localStorage.removeItem(key)
+
+    // 更新 meta
+    const metaKey = 'survey_meta_' + currentSurveyId
+    const metaRaw = localStorage.getItem(metaKey) || '{}'
+    const meta = JSON.parse(metaRaw)
+    meta.submissionCount = 0
+    meta.lastSubmission = null
+    localStorage.setItem(metaKey, JSON.stringify(meta))
+
     loadData()
     alert('数据已清空')
   })
 }
 
-// 显示模态框
+// 模态框
 function showModal(title, message, onConfirm) {
   const modal = document.getElementById('confirmModal')
-  const modalTitle = document.getElementById('modalTitle')
-  const modalMessage = document.getElementById('modalMessage')
+  document.getElementById('modalTitle').textContent = title
+  document.getElementById('modalMessage').textContent = message
+
   const confirmBtn = document.getElementById('modalConfirm')
-
-  modalTitle.textContent = title
-  modalMessage.textContent = message
-
-  const confirmHandler = () => {
+  const handler = () => {
     onConfirm()
     closeModal()
   }
-
-  confirmBtn.onclick = confirmHandler
+  confirmBtn.onclick = handler
   modal.classList.add('show')
 }
 
-// 关闭模态框
 function closeModal() {
-  const modal = document.getElementById('confirmModal')
-  modal.classList.remove('show')
+  document.getElementById('confirmModal').classList.remove('show')
 }
 
-// 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', init)
-
-if (document.readyState !== 'loading') {
-  init()
-}
-
-// 暴露给全局
+// 全局方法（供 HTML 调用）
 window.goToPage = goToPage
 window.exportCSV = exportCSV
 window.clearAllData = clearAllData

@@ -8,73 +8,87 @@
 </head>
 <body>
   <div class="container">
-    <header class="header">
-      <a href="index.html" class="back-link">← 返回问卷</a>
-      <h1>📊 统计后台</h1>
-      <p class="subtitle">问卷数据实时统计</p>
-    </header>
-
-    <!-- 统计卡片 -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon">📝</div>
-        <div class="stat-value" id="totalCount">0</div>
-        <div class="stat-label">总提交数</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">📈</div>
-        <div class="stat-value" id="averageScore">0.00</div>
-        <div class="stat-label">平均分</div>
-      </div>
-      <div class="stat-card highlight">
-        <div class="stat-icon">🏆</div>
-        <div class="stat-value" id="maxScore">0.00</div>
-        <div class="stat-label">最高分</div>
+    <!-- 密码验证界面 -->
+    <div id="authPanel" class="auth-panel">
+      <div class="card">
+        <div class="auth-icon">🔐</div>
+        <h1>管理员验证</h1>
+        <p class="subtitle">请输入管理员密码查看统计数据</p>
+        <div class="form-group">
+          <label for="adminToken">管理员密码</label>
+          <input type="password" id="adminToken" placeholder="输入密码" onkeypress="if(event.key==='Enter')verifyToken()">
+        </div>
+        <button class="btn" onclick="verifyToken()">解锁统计</button>
+        <p class="error-msg" id="authError"></p>
       </div>
     </div>
 
-    <!-- 各题平均分 -->
-    <div class="section-card">
-      <h2 class="section-title">📋 各题平均分</h2>
-      <div class="question-stats" id="questionStats">
-        <!-- 动态生成 -->
-      </div>
-    </div>
+    <!-- 统计面板（初始隐藏） -->
+    <div id="statsPanel" class="stats-panel" style="display: none;">
+      <header class="header">
+        <a href="index-v3.html?surveyId={{SURVEY_ID}}" class="back-link">← 返回问卷</a>
+        <h1>📊 统计后台</h1>
+        <p class="subtitle" id="surveyTitleDisplay">问卷标题</p>
+        <div class="survey-id-display">
+          <small>Survey ID: <span id="surveyIdDisplay"></span></small>
+        </div>
+      </header>
 
-    <!-- 提交记录 -->
-    <div class="section-card">
-      <div class="section-header">
-        <h2 class="section-title">📜 提交记录 <span id="recordCount">(0)</span></h2>
-        <button class="export-btn" onclick="exportCSV()">📥 导出 CSV</button>
+      <!-- 统计卡片 -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📝</div>
+          <div class="stat-value" id="totalCount">0</div>
+          <div class="stat-label">总提交数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📈</div>
+          <div class="stat-value" id="averageScore">0.00</div>
+          <div class="stat-label">平均分</div>
+        </div>
+        <div class="stat-card highlight">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-value" id="maxScore">0.00</div>
+          <div class="stat-label">最高分</div>
+        </div>
       </div>
 
-      <div class="filter-bar">
-        <input type="text" id="searchInput" class="search-input" placeholder="搜索建议内容...">
-        <select id="sortSelect" class="sort-select">
-          <option value="time-desc">时间 ↓</option>
-          <option value="time-asc">时间 ↑</option>
-          <option value="score-desc">分数 ↓</option>
-          <option value="score-asc">分数 ↑</option>
-        </select>
+      <!-- 各题平均分 -->
+      <div class="section-card">
+        <h2 class="section-title">📋 各题平均分</h2>
+        <div class="question-stats" id="questionStats"></div>
       </div>
 
-      <div class="records-list" id="recordsList">
-        <!-- 动态生成 -->
+      <!-- 提交记录 -->
+      <div class="section-card">
+        <div class="section-header">
+          <h2 class="section-title">📜 提交记录 <span id="recordCount">(0)</span></h2>
+          <button class="export-btn" onclick="exportCSV()">📥 导出 CSV</button>
+        </div>
+
+        <div class="filter-bar">
+          <input type="text" id="searchInput" class="search-input" placeholder="搜索建议内容...">
+          <select id="sortSelect" class="sort-select">
+            <option value="time-desc">时间 ↓</option>
+            <option value="time-asc">时间 ↑</option>
+            <option value="score-desc">分数 ↓</option>
+            <option value="score-asc">分数 ↑</option>
+          </select>
+        </div>
+
+        <div class="records-list" id="recordsList"></div>
+        <div class="pagination" id="pagination" style="display: none;"></div>
       </div>
 
-      <div class="pagination" id="pagination" style="display: none;">
-        <!-- 动态生成 -->
+      <!-- 操作 -->
+      <div class="actions">
+        <button class="action-btn danger" onclick="clearAllData()">🗑️ 清空数据</button>
+        <button class="action-btn primary" onclick="exportCSV()">💾 导出数据</button>
       </div>
-    </div>
-
-    <!-- 操作按钮 -->
-    <div class="actions">
-      <button class="action-btn danger" onclick="clearAllData()">🗑️ 清空所有数据</button>
-      <button class="action-btn primary" onclick="exportCSV()">💾 导出数据</button>
     </div>
 
     <footer class="footer">
-      <p>Powered by OpenClaw | 数据存储在本地</p>
+      <p>Powered by OpenClaw | 数据按调查隔离存储</p>
     </footer>
   </div>
 
@@ -91,6 +105,6 @@
     </div>
   </div>
 
-  <script src="admin.js"></script>
+  <script src="admin-v3.js"></script>
 </body>
 </html>
