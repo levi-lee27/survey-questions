@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>生成问卷二维码</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 24px;
+      padding: 48px 40px;
+      max-width: 560px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 {
+      text-align: center;
+      font-size: 32px;
+      color: #1a1a1a;
+      margin-bottom: 12px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 40px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .form-group {
+      margin-bottom: 24px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+      font-size: 14px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 12px;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .qr-container {
+      text-align: center;
+      margin-top: 32px;
+      padding: 24px;
+      background: #f8f9fa;
+      border-radius: 16px;
+      border: 2px dashed #e0e0e0;
+    }
+    .qr-container h3 {
+      margin-bottom: 16px;
+      color: #333;
+    }
+    #qrcode {
+      display: inline-block;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      min-height: 200px;
+      min-width: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #qrcode canvas {
+      display: block;
+    }
+    .qr-info {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #666;
+    }
+    .preview-links {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .preview-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #667eea;
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .preview-link:hover {
+      background: #e8eaf6;
+    }
+    .notes {
+      margin-top: 24px;
+      padding: 16px;
+      background: #fef3e2;
+      border-radius: 8px;
+      border-left: 4px solid #ff9800;
+      font-size: 13px;
+      color: #666;
+      line-height: 1.6;
+    }
+    .notes strong {
+      color: #333;
+    }
+    .error-message {
+      color: #ff4d4f;
+      background: #fff2f0;
+      border: 1px solid #ffccc7;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 16px;
+      font-size: 14px;
+    }
+    .success-check {
+      color: #52c41a;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; max-width: 100%; }
+      .form-group, .btn, .notes { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📱 问卷二维码生成器</h1>
+    <p class="subtitle">输入问卷标题，生成可分享的二维码</p>
+
+    <div class="form-group">
+      <label for="surveyTitle">问卷标题</label>
+      <input type="text" id="surveyTitle" value="评审满意度调查" placeholder="请输入问卷标题">
+    </div>
+
+    <div class="form-group">
+      <label for="serverUrl">部署地址</label>
+      <input type="text" id="serverUrl" value="https://levi-lee27.github.io/survey-questions" placeholder="https://your-domain.com">
+      <p style="font-size: 12px; color: #999; margin-top: 6px;">
+        当前已部署到 GitHub Pages，请使用 HTTPS 地址
+      </p>
+    </div>
+
+    <button class="btn" id="generateBtn" onclick="generateQR()">🎲 生成二维码</button>
+    <button class="btn btn-secondary" onclick="printQR()">🖨️ 打印二维码</button>
+
+    <div class="qr-container" id="qrContainer" style="display: none;">
+      <h3>📲 微信扫码填写</h3>
+      <div id="qrcode"></div>
+      <div class="success-check" id="successCheck" style="display: none;">✓ 二维码已生成</div>
+      <div class="qr-info">
+        <p>二维码有效：永久</p>
+        <p>数据存储：本地浏览器</p>
+      </div>
+      <div class="preview-links">
+        <strong>扫码不方便？点击链接打开：</strong>
+        <a id="surveyLink" class="preview-link" target="_blank"></a>
+      </div>
+    </div>
+
+    <div class="error-message" id="errorMessage" style="display: none;"></div>
+
+    <div class="notes">
+      <strong>📝 使用说明：</strong><br>
+      1. 修改问卷标题可自定义显示名称<br>
+      2. "部署地址" 填写问卷的实际访问地址<br>
+      3. 生成的二维码长期有效，可分享到微信群<br>
+      4. 微信内访问必须使用 HTTPS（已自动配置）
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script>
+    let currentUrl = ''
+    let qrCodeLoaded = false
+
+    // 检查 QRCode 库是否加载
+    function checkQRCodeLibrary() {
+      return typeof QRCode !== 'undefined'
+    }
+
+    // 显示错误
+    function showError(msg) {
+      document.getElementById('errorMessage').textContent = msg
+      document.getElementById('errorMessage').style.display = 'block'
+    }
+
+    // 隐藏错误
+    function hideError() {
+      document.getElementById('errorMessage').style.display = 'none'
+    }
+
+    async function generateQR() {
+      hideError()
+
+      const title = document.getElementById('surveyTitle').value.trim() || '评审满意度调查'
+      let serverUrl = document.getElementById('serverUrl').value.trim()
+
+      // 自动补全协议
+      if (serverUrl && !serverUrl.startsWith('http://') && !serverUrl.startsWith('https://')) {
+        serverUrl = 'https://' + serverUrl
+      }
+
+      serverUrl = serverUrl || 'https://levi-lee27.github.io/survey-questions'
+
+      // 构建带参数的 URL
+      const params = new URLSearchParams({
+        title: encodeURIComponent(title)
+      })
+      const surveyUrl = `${serverUrl}/index.html?${params.toString()}`
+
+      currentUrl = surveyUrl
+      document.getElementById('surveyLink').href = surveyUrl
+      document.getElementById('surveyLink').textContent = surveyUrl
+
+      // 检查库是否加载
+      if (!checkQRCodeLibrary()) {
+        showError('二维码库正在加载，请稍等 2 秒后重试...')
+        return
+      }
+
+      // 生成二维码
+      const container = document.getElementById('qrcode')
+      container.innerHTML = '<div style="color: #999;">生成中...</div>'
+      document.getElementById('qrContainer').style.display = 'block'
+
+      try {
+        await QRCode.toCanvas(surveyUrl, {
+          width: 256,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#ffffff'
+          },
+          errorCorrectionLevel: 'M'
+        }, (error, canvas) => {
+          if (error) {
+            console.error('QR Code generation error:', error)
+            container.innerHTML = '<p style="color: red;">生成失败：' + error.message + '</p>'
+            return
+          }
+          container.innerHTML = ''
+          container.appendChild(canvas)
+          document.getElementById('successCheck').style.display = 'block'
+        })
+      } catch (e) {
+        console.error('QR Code error:', e)
+        container.innerHTML = '<p style="color: red;">生成失败：' + e.message + '</p>'
+      }
+    }
+
+    function printQR() {
+      if (!currentUrl) {
+        alert('请先生成二维码')
+        return
+      }
+      window.print()
+    }
+
+    // 页面加载完成
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Page loaded, QRCode library:', checkQRCodeLibrary() ? 'ready' : 'loading...')
+
+      // 延迟自动生成，确保库已加载
+      setTimeout(() => {
+        if (checkQRCodeLibrary()) {
+          generateQR()
+        } else {
+          console.log('QRCode library not ready yet, waiting...')
+          // 最多等待 5 秒
+          let attempts = 0
+          const waitInterval = setInterval(() => {
+            attempts++
+            if (checkQRCodeLibrary() || attempts >= 10) {
+              clearInterval(waitInterval)
+              generateQR()
+            }
+          }, 500)
+        }
+      }, 500)
+    })
+  </script>
+</body>
+</html>
