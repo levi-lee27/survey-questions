@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>评审满意度调查</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="logo-section">
+        <div class="logo">📋</div>
+        <h1 class="title" id="surveyTitle">评审满意度调查</h1>
+        <p class="subtitle">请根据实际情况填写以下评分项</p>
+      </div>
+
+      <form id="surveyForm">
+        <div class="questions-section">
+          <div class="question-item" data-id="1">
+            <div class="question-header">
+              <span class="question-number">问题 ①</span>
+              <span class="question-weight">权重：40%</span>
+            </div>
+            <p class="question-text">业务场景(正常、异常)覆盖完整全面</p>
+            <div class="options-group">
+              <label class="option-label">
+                <input type="radio" name="q1" value="5" class="option-input">
+                <span class="option-card">
+                  <span class="option-emoji">⭐</span>
+                  <span class="option-name">优秀</span>
+                  <span class="option-score">5分</span>
+                </span>
+              </label>
+              <label class="option-label">
+                <input type="radio" name="q1" value="3" class="option-input">
+                <span class="option-card">
+                  <span class="option-emoji">👍</span>
+                  <span class="option-name">良好</span>
+                  <span class="option-score">3分</span>
+                </span>
+              </label>
+              <label class="option-label">
+                <input type="radio" name="q1" value="1" class="option-input">
+                <span class="option-card">
+                  <span class="option-emoji">⚠️</span>
+                  <span class="option-name">较差</span>
+                  <span class="option-score">1分</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="question-item" data-id="2">
+            <div class="question-header">
+              <span class="question-number">问题 ②</span>
+              <span class="question-weight">权重：40%</span>
+            </div>
+            <p class="question-text">大纲覆盖需求规则逻辑、账务全面准确</p>
+            <div class="options-group">
+              <label class="option-label">
+                <input type="radio" name="q2" value="5" class="option-input">
+                <span class="option-card">
+                  <span class="option-emoji">⭐</span>
+                  <span class="option-name">优秀</span>
+                  <span class="option-score">5分</span>
+                </span>
+              </label>
+              <label class="option-label">
+                <input type="radio" name="q2" value="3" class="option-input">
+                <span class="option-card">
+                  <span class="option-emoji">👍</span>
+                  <span class="option-name">良好</span>
+                  <span class="option-score">3分</span>
+                </span>
+              </label>
+              <label class="option-label">
+                <input type="radio" name="q2" value="1" class="option-input">
+                <span class="option-card">
+                  <span class="option-emoji">⚠️</span>
+                  <span class="option-name">较差</span>
+                  <span class="option-score">1分</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="question-item" data-id="3">
+            <div class="question-header">
+              <span class="question-number">问题 ③</span>
+              <span class="question-weight">权重：20%</span>
+            </div>
+            <p class="question-text">大纲编写不冗余，描述精炼、准确</p>
+            <div class="options-group">
+              <label class="option-label">
+                <input type="radio" name="q3" value="5" class="option-input">
+                <span class="option-card">
+                  <span class="option-emoji">⭐</span>
+                  <span class="option-name">优秀</span>
+                  <span class="option-score">5分</span>
+                </span>
+              </label>
+              <label class="option-label">
+                <input type="radio" name="q3" value="3" class="option-input">
+                <span class="option-card">
+                  <span class="option-emoji">👍</span>
+                  <span class="option-name">良好</span>
+                  <span class="option-score">3分</span>
+                </span>
+              </label>
+              <label class="option-label">
+                <input type="radio" name="q3" value="1" class="option-input">
+                <span class="option-card">
+                  <span class="option-emoji">⚠️</span>
+                  <span class="option-name">较差</span>
+                  <span class="option-score">1分</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="suggestion-section">
+          <label class="suggestion-label">
+            <span class="label-text">其他问题及建议（选填）</span>
+            <span class="char-count" id="charCount">0/500</span>
+          </label>
+          <textarea
+            id="suggestion"
+            class="suggestion-input"
+            placeholder="请填写您的宝贵建议（选填）..."
+            maxlength="500"
+            rows="4"
+          ></textarea>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn" disabled>
+          <span class="btn-icon">📤</span>
+          <span class="btn-text">提交评价</span>
+        </button>
+      </form>
+
+      <div class="admin-link">
+        <a href="admin.html" class="admin-btn">📊 统计后台</a>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Powered by OpenClaw</p>
+    </div>
+  </div>
+
+  <div id="successModal" class="modal">
+    <div class="modal-content">
+      <div class="success-icon">✓</div>
+      <h2>提交成功</h2>
+      <div class="score-summary">
+        <div class="summary-item">
+          <span class="summary-label">业务场景</span>
+          <span class="summary-value" id="score1">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">大纲覆盖</span>
+          <span class="summary-value" id="score2">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">大纲精炼</span>
+          <span class="summary-value" id="score3">-</span>
+        </div>
+        <div class="total-score">
+          <span class="total-label">综合得分</span>
+          <span class="total-value" id="totalScore">-</span>
+        </div>
+      </div>
+      <p class="success-message">感谢您的评价！</p>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
