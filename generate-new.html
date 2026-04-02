@@ -100,6 +100,7 @@
       border-radius: 12px;
       margin-top: 24px;
       display: none;
+      border: 2px solid #667eea;
     }
     .qr-result.show {
       display: block;
@@ -112,34 +113,40 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       margin-bottom: 16px;
     }
-    #qrcode img {
+    #qrcode img, #qrcode canvas {
       display: block;
+      max-width: 256px;
     }
-    .qr-info {
-      font-size: 13px;
-      color: #666;
-      margin-bottom: 12px;
-    }
-    .survey-link {
-      display: block;
-      padding: 12px;
+    .survey-link-box {
       background: white;
       border: 1px solid #e0e0e0;
       border-radius: 8px;
+      padding: 12px;
       margin: 12px 0;
       word-break: break-all;
-      font-size: 13px;
-      color: #667eea;
-      text-decoration: none;
+      text-align: left;
     }
-    .survey-link:hover {
-      background: #e8eaf6;
+    .survey-link-label {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 6px;
+    }
+    .survey-link-url {
+      font-size: 14px;
+      color: #667eea;
+      font-weight: 500;
     }
     .actions {
       display: flex;
       gap: 12px;
       margin-top: 16px;
       justify-content: center;
+    }
+    .btn-small {
+      padding: 10px 20px;
+      font-size: 14px;
+      width: auto;
+      margin: 0;
     }
     .survey-list {
       margin-top: 24px;
@@ -172,12 +179,6 @@
       display: flex;
       gap: 8px;
     }
-    .btn-small {
-      padding: 8px 16px;
-      font-size: 13px;
-      width: auto;
-      margin: 0;
-    }
     .badge {
       display: inline-block;
       padding: 4px 8px;
@@ -186,6 +187,21 @@
       border-radius: 4px;
       font-size: 11px;
       margin-left: 8px;
+    }
+    .test-link {
+      margin-top: 12px;
+      padding: 10px;
+      background: #e6f7ff;
+      border-radius: 6px;
+      border: 1px solid #91d5ff;
+    }
+    .test-link a {
+      color: #1890ff;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .test-link a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -215,26 +231,34 @@
 
     <div class="qr-result" id="qrResult">
       <h3>✅ 问卷创建成功</h3>
-      <div class="qr-info">分享下方二维码给用户填写</div>
+      <p class="qr-info">扫描下方二维码或点击链接填写问卷</p>
       <div id="qrcode"></div>
-      <div class="survey-link">
-        <strong>问卷链接：</strong><br>
-        <span id="surveyUrl"></span>
+
+      <div class="survey-link-box">
+        <div class="survey-link-label">📱 问卷链接（可复制分享）：</div>
+        <div class="survey-link-url" id="surveyUrlDisplay"></div>
       </div>
-      <div class="survey-link" style="background: #fff7e6; border-color: #ffd591;">
-        <strong>🔐 后台统计：</strong><br>
-        <span id="adminUrl"></span>
-        <div class="help-text" style="margin-top: 6px;">请保存此链接，需要密码才能访问</div>
+
+      <div class="survey-link-box" style="background: #fff7e6; border-color: #ffd591;">
+        <div class="survey-link-label">🔐 后台统计链接（需密码）：</div>
+        <div class="survey-link-url" id="adminUrlDisplay"></div>
       </div>
+
+      <div class="test-link">
+        <strong>🔄 测试链接：</strong>
+        <a id="testSurveyLink" href="#" target="_blank">点击打开问卷页面</a>
+        <br>
+        <small style="color: #999;">请在浏览器中打开测试，确保链接有效</small>
+      </div>
+
       <div class="actions">
-        <button class="btn btn-small" onclick="copyToClipboard('surveyUrl')">📋 复制问卷链接</button>
-        <button class="btn btn-small" onclick="copyToClipboard('adminUrl')">📋 复制后台链接</button>
+        <button class="btn btn-small" onclick="copyToClipboard('surveyUrlDisplay')">📋 复制问卷链接</button>
+        <button class="btn btn-small" onclick="copyToClipboard('adminUrlDisplay')">📋 复制后台链接</button>
         <button class="btn btn-secondary btn-small" onclick="closeResult()">关闭</button>
       </div>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script>
     const STORAGE_KEY = 'survey_manager_list'
 
@@ -282,13 +306,22 @@
       return div.innerHTML
     }
 
+    // 获取当前 GitHub Pages 的基础 URL
     function getBaseUrl() {
-      const path = window.location.pathname
-      const match = path.match(/(^\/[^\/]+\/)/)
-      if (match) {
-        return window.location.origin + match[1]
+      // 对于 GitHub Pages，确保使用正确的路径
+      const origin = window.location.origin
+      const pathname = window.location.pathname
+
+      // 如果路径包含仓库名（如 /survey-questions/generate.html）
+      // 提取 /survey-questions/
+      const parts = pathname.split('/')
+      if (parts.length >= 2 && parts[1] !== '') {
+        // 假设第一个非空路径段是仓库名
+        return `${origin}/${parts[1]}/`
       }
-      return window.location.origin + path.replace(/[^/]*$/, '')
+
+      // 回退：使用当前目录的上一级
+      return origin + '/'
     }
 
     function createSurvey() {
@@ -309,47 +342,86 @@
       saveSurveyList(surveys)
 
       const baseUrl = getBaseUrl()
+      console.log('Base URL:', baseUrl)
+
+      // 构建完整的问卷链接（确保是绝对 URL）
       const surveyUrl = `${baseUrl}index.html?surveyId=${surveyId}&title=${encodeURIComponent(title)}`
       const adminUrl = `${baseUrl}admin.html?surveyId=${surveyId}${password ? '&token=' + encodeURIComponent(password) : ''}`
 
-      console.log('创建问卷:', { surveyId, title, surveyUrl, adminUrl })
+      console.log('生成的问卷链接:', surveyUrl)
+      console.log('生成的管理员链接:', adminUrl)
 
-      document.getElementById('surveyUrl').textContent = surveyUrl
-      document.getElementById('adminUrl').textContent = adminUrl
+      // 显示链接
+      document.getElementById('surveyUrlDisplay').textContent = surveyUrl
+      document.getElementById('adminUrlDisplay').textContent = adminUrl
+
+      // 设置测试链接
+      const testLink = document.getElementById('testSurveyLink')
+      testLink.href = surveyUrl
+      testLink.textContent = surveyUrl
+
       document.getElementById('qrResult').classList.add('show')
 
+      // 生成二维码
       generateQRCode(surveyUrl)
+
+      // 渲染列表
       renderSurveyList(surveys)
     }
 
+    // 使用 QR Server API（国内可访问）
     function generateQRCode(text) {
       const container = document.getElementById('qrcode')
       container.innerHTML = '<div style="padding: 40px; color: #999;">生成中...</div>'
 
-      console.log('生成二维码，URL:', text)
-
-      // 使用 Google Charts API（最稳定）
+      // 方法1: QR Server API
       const encoded = encodeURIComponent(text)
-      const url = `https://chart.googleapis.com/chart?cht=qr&chs=256x256&chl=${encoded}&chld=M|0`
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encoded}&margin=1&format=png`
 
       const img = new Image()
+      img.crossOrigin = 'anonymous'
+
+      const timeoutId = setTimeout(() => {
+        if (!img.complete) {
+          console.warn('QR Server 超时，尝试备用方法')
+          img.onerror()
+        }
+      }, 8000)
+
       img.onload = () => {
-        console.log('QR code loaded')
+        clearTimeout(timeoutId)
+        console.log('二维码加载成功（QR Server）')
         container.innerHTML = ''
         container.appendChild(img)
       }
+
       img.onerror = () => {
-        console.error('QR code failed, showing fallback')
-        container.innerHTML = `
-          <div style="padding: 20px; text-align: center;">
-            <div style="color: #ff9800; margin-bottom: 10px;">二维码生成失败</div>
-            <div style="font-size: 12px; color: #666; margin-bottom: 12px;">请手动复制链接访问：</div>
-            <div style="padding: 8px; background: #f5f5f5; border-radius: 4px; font-size: 11px; word-break: break-all; margin: 8px 0;">${escapeHtml(text)}</div>
-            <a href="${escapeHtml(text)}" target="_blank" style="display: inline-block; margin-top: 10px; padding: 10px 20px; background: #667eea; color: white; border-radius: 6px; text-decoration: none;">🔗 打开问卷</a>
-          </div>
-        `
+        clearTimeout(timeoutId)
+        console.warn('QR Server 失败，尝试 Google Charts')
+        // 方法2: Google Charts
+        const fallbackUrl = `https://chart.googleapis.com/chart?cht=qr&chs=256x256&chl=${encoded}&chld=M|0`
+        const img2 = new Image()
+        img2.onload = () => {
+          console.log('二维码加载成功（Google Charts）')
+          container.innerHTML = ''
+          container.appendChild(img2)
+        }
+        img2.onerror = () => {
+          console.error('所有二维码 API 都失败')
+          // 方法3: 显示纯文本链接
+          container.innerHTML = `
+            <div style="padding: 20px; text-align: center;">
+              <div style="color: #ff9800; margin-bottom: 10px;">⚠️ 二维码生成失败</div>
+              <div style="font-size: 12px; color: #666; margin-bottom: 12px;">请手动复制链接到浏览器访问</div>
+              <div style="padding: 10px; background: #f5f5f5; border-radius: 6px; margin: 8px 0; word-break: break-all; font-size: 12px;">${escapeHtml(text)}</div>
+              <a href="${escapeHtml(text)}" target="_blank" style="display: inline-block; margin-top: 10px; padding: 12px 24px; background: #667eea; color: white; border-radius: 6px; text-decoration: none; font-weight: 600;">🔗 打开问卷</a>
+            </div>
+          `
+        }
+        img2.src = fallbackUrl
       }
-      img.src = url
+
+      img.src = qrUrl
     }
 
     function copyToClipboard(elementId) {
@@ -398,6 +470,10 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       loadSurveyList()
+      // 自动检测并设置正确的 basePath
+      console.log('当前域名:', window.location.origin)
+      console.log('当前路径:', window.location.pathname)
+      console.log('计算的基础 URL:', getBaseUrl())
     })
   </script>
 </body>

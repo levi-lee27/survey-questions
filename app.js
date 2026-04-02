@@ -75,7 +75,14 @@ function init() {
     charCount.textContent = `${suggestion.value.length}/500`
   })
 
-  updateSubmitButton()
+  // 为每个 radio 单独绑定 change 事件（更可靠）
+  const radioInputs = surveyForm.querySelectorAll('input[type="radio"]')
+  radioInputs.forEach(radio => {
+    radio.addEventListener('change', updateSubmitButton)
+  })
+
+  // 初始化时检查
+  setTimeout(updateSubmitButton, 100)
 }
 
 // 更新提交按钮状态
@@ -84,7 +91,11 @@ function updateSubmitButton() {
   const q1 = formData.get('q1')
   const q2 = formData.get('q2')
   const q3 = formData.get('q3')
-  submitBtn.disabled = !(q1 && q2 && q3)
+  const allSelected = q1 && q2 && q3
+  submitBtn.disabled = !allSelected
+
+  // 调试信息
+  console.log('提交按钮状态:', { q1, q2, q3, allSelected, disabled: submitBtn.disabled })
 }
 
 // 计算分数
@@ -119,14 +130,24 @@ function saveSurvey(surveyId, data) {
     results.push(data)
     localStorage.setItem(key, JSON.stringify(results))
 
-    // 更新提交计数
+    // 更新提交计数和元数据
     const metaKey = 'survey_meta_' + surveyId
-    const metaRaw = localStorage.getItem(metaKey) || '{}'
-    const meta = JSON.parse(metaRaw)
+    const metaRaw = localStorage.getItem(metaKey)
+    let meta = metaRaw ? JSON.parse(metaRaw) : {
+      surveyId: surveyId,
+      title: document.getElementById('surveyTitle')?.textContent || '未命名问卷',
+      password: '',  // 可以从 URL 参数或其他地方获取
+      createdAt: new Date().toISOString(),
+      submissionCount: 0
+    }
+
     meta.submissionCount = results.length
     meta.lastSubmission = new Date().toISOString()
+    meta.title = meta.title || document.getElementById('surveyTitle')?.textContent || '未命名问卷'
+
     localStorage.setItem(metaKey, JSON.stringify(meta))
 
+    console.log('数据已保存:', { surveyId, total: results.length, meta })
     return true
   } catch (e) {
     console.error('保存失败:', e)
