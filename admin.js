@@ -371,8 +371,14 @@ function exportCSV() {
   const a = document.createElement('a')
   a.href = url
   a.download = `问卷数据_${currentSurveyId}_${new Date().toISOString().split('T')[0]}.csv`
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(url)
+
+  // 延迟释放 URL,确保下载已开始
+  setTimeout(() => {
+    URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+  }, 100)
 }
 
 // 清空数据

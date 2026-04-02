@@ -136,9 +136,21 @@ function saveSurvey(surveyId, data) {
     let meta = metaRaw ? JSON.parse(metaRaw) : {
       surveyId: surveyId,
       title: document.getElementById('surveyTitle')?.textContent || '未命名问卷',
-      password: '',  // 可以从 URL 参数或其他地方获取
+      password: '',  // 将从 survey_manager_list 获取
       createdAt: new Date().toISOString(),
       submissionCount: 0
+    }
+
+    // 如果密码为空,尝试从 survey_manager_list 获取
+    if (!meta.password) {
+      const managerList = localStorage.getItem('survey_manager_list')
+      if (managerList) {
+        const surveys = JSON.parse(managerList)
+        const survey = surveys.find(s => s.surveyId === surveyId)
+        if (survey && survey.password) {
+          meta.password = survey.password
+        }
+      }
     }
 
     meta.submissionCount = results.length
