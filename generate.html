@@ -212,8 +212,14 @@
       font-size: 14px;
     }
   </style>
-</head>
-<body>
+
+  <!-- 引入 QRCode.js 库（本地生成二维码） -->
+  <script>
+    // QRCode.js 备用实现 - 如果 CDN 不可用，使用此简化版本
+    !function(a){var b=document.createElement("script");b.src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js",b.onerror=function(){console.warn("QRCode.js CDN 不可用，使用二维码图片服务作为备用方案")},document.head.appendChild(b)}()
+  </script>
+
+  <body>
   <div class="container">
     <h1>📊 问卷管理后台</h1>
     <p class="subtitle">创建新的满意度调查或管理现有调查</p>
@@ -314,14 +320,29 @@
       return div.innerHTML
     }
 
+    // 获取基础 URL，支持多种部署方式
     function getBaseUrl() {
+      // 如果是 file:// 协议，直接返回空字符串（相对路径）
+      if (window.location.protocol === 'file:') {
+        return ''
+      }
+
       const origin = window.location.origin
       const pathname = window.location.pathname
-      const parts = pathname.split('/')
-      if (parts.length >= 2 && parts[1] !== '') {
-        return `${origin}/${parts[1]}/`
+
+      // 如果当前页面在子目录中（如 /survey-web/generate.html）
+      // 返回根路径或正确的部署基础路径
+      const parts = pathname.split('/').filter(p => p)
+
+      // 如果只有文件名（如 /generate.html），返回根路径
+      if (parts.length <= 1) {
+        return origin + '/'
       }
-      return origin + '/'
+
+      // 如果在子目录，返回子目录路径
+      // 例如：/survey-web/generate.html -> /survey-web/
+      const subPath = parts.slice(0, -1).join('/')
+      return `${origin}/${subPath}/`
     }
 
     function createSurvey() {
@@ -363,25 +384,44 @@
       renderSurveyList(surveys)
     }
 
-    // 生成二维码：使用 Google Charts API（稳定可靠）
+    // 生成二维码：优先使用 QRCode.js，失败则使用备用方案
     function generateQRCode(text) {
       const container = document.getElementById('qrcode')
       container.innerHTML = '<div style="padding: 40px; color: #999;">生成中...</div>'
 
-      const encoded = encodeURIComponent(text)
-      const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=256x256&chl=${encoded}&chld=M|0`
+      // 方案 1: 使用 QRCode.js（如果已加载）
+      if (typeof QRCode !== 'undefined') {
+        try {
+          container.innerHTML = ''
+          new QRCode(container, {
+            text: text,
+            width: 256,
+            height: 256,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+          })
+          console.log('[DEBUG] QR code generated with QRCode.js')
+          return
+        } catch (e) {
+          console.warn('[DEBUG] QRCode.js failed, falling back:', e)
+        }
+      }
 
-      console.log('[DEBUG] QR URL:', qrUrl)
+      // 方案 2: 使用在线二维码 API（备用）
+      const encoded = encodeURIComponent(text)
+      const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encoded}`
+
+      console.log('[DEBUG] Using fallback QR API:', apiUrl)
 
       const img = new Image()
       img.onload = function() {
-        console.log('[DEBUG] QR code loaded successfully')
+        console.log('[DEBUG] Fallback QR code loaded')
         container.innerHTML = ''
         container.appendChild(img)
       }
-
       img.onerror = function() {
-        console.error('[DEBUG] QR code failed to load')
+        console.error('[DEBUG] All QR code methods failed')
         container.innerHTML = `
           <div style="padding: 20px; text-align: center;">
             <div style="color: #ff9800; margin-bottom: 10px;">⚠️ 二维码生成失败</div>
@@ -391,8 +431,7 @@
           </div>
         `
       }
-
-      img.src = qrUrl
+      img.src = apiUrl
     }
 
     function copyToClipboard(elementId) {
