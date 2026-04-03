@@ -1,126 +1,95 @@
 ┌─────────────────────────────────────────────────────────────┐
-│        Firebase 配置完成检查清单                              │
+│        Supabase 跨设备同步 - 配置完成检查清单                 │
 └─────────────────────────────────────────────────────────────┘
 
 📍 项目位置：C:\Users\levi_\openclaw\survey-web
-🌐 部署地址：https://levi-lee27.github.io/survey-questions/
+🌐 部署网址：https://levi-lee27.github.io/survey-questions/
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-【步骤 1：创建 Firebase 项目】
-   URL: https://console.firebase.google.com/
-   □ 登录 Google 账号
-   □ 创建项目（名称：survey-questions）
-   □ 等待项目创建完成（1-2分钟）
+【步骤 1：创建 Supabase 项目】
+   □ 访问 https://supabase.com/
+   □ 注册/登录账号
+   □ 点击 "New project"
+   □ 输入项目名称（如 survey-questions）
+   □ 设置数据库密码（记住！）
+   □ 选择区域（如 Singapore）
+   □ 选择 Free 套餐
+   □ 点击 "Create new project"
+   □ 等待 2-3 分钟创建完成
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-【步骤 2：启用 Realtime Database】
-   □ 点击 "Realtime Database"
-   □ 点击 "Create Database"
-   □ 选择位置（如 asia-southeast1）
-   □ 选择 "Start in test mode"
-   □ 点击 "Enable"
-   □ 复制数据库 URL（备用）
+【步骤 2：执行 SQL 建表】
+   □ 左侧菜单 → SQL Editor
+   □ 点击 "New query"
+   □ 复制 SUPABASE_QUICK_START.md 中的完整 SQL
+   □ 粘贴到编辑器
+   □ 点击 "Run"
+   □ 显示 "Success" ✅
+
+   建表内容：
+   - surveys 表（问卷元数据）
+   - submissions 表（提交数据）
+   - 索引和 RLS 策略
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-【步骤 3：获取 Web 应用配置】
-   □ 点击项目名称 → ⚙️ Project settings
-   □ 滚动到 "Your apps"
-   □ 点击 Web 图标 "</>"
-   □ App nickname: survey-web
-   □ 不勾选 "Also set up Firebase Hosting"
-   □ 点击 "Register app"
-   □ 复制整个 firebaseConfig 对象
-
-   示例格式：
-   const firebaseConfig = {
-     apiKey: "AIzaSy...",
-     authDomain: "...",
-     databaseURL: "https://...",
-     projectId: "...",
-     storageBucket: "...",
-     messagingSenderId: "...",
-     appId: "..."
-   };
+【步骤 3：获取配置信息】
+   □ 左侧菜单 → Settings → API
+   □ 复制 URL（如 https://xxx.supabase.co）
+   □ 复制 Anon key（以 eyJ 开头的一长串）
+   □ 记下这两个值
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 【步骤 4：填入配置文件】
-   文件：C:\Users\levi_\openclaw\survey-web\firebase-config.js
-
-   □ 用记事本打开 firebase-config.js
-   □ 删除所有示例注释
-   □ 粘贴你复制的配置
+   文件：C:\Users\levi_\openclaw\survey-web\supabase-config.js
+   
+   □ 用记事本打开 supabase-config.js
+   □ 填入 url: "你的URL"
+   □ 填入 anonKey: "你的Anon key"
    □ 保存文件
 
    正确示例：
-   const firebaseConfig = {
-     apiKey: "AIzaSyXXXXXXXXXXXXXXXXX",
-     authDomain: "survey-questions.firebaseapp.com",
-     databaseURL: "https://survey-questions-default-rtdb.asia-southeast1.firebasedatabase.app",
-     projectId: "survey-questions",
-     storageBucket: "survey-questions.appspot.com",
-     messagingSenderId: "123456789012345",
-     appId: "1:123456789012345:web:abcdef123456"
+   const supabaseConfig = {
+     url: "https://abcdefghijklmnop.supabase.co",
+     anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
    };
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-【步骤 5：验证配置（可选但推荐）】
-
-   方法 A - 使用验证工具：
+【步骤 5：验证配置】
    □ 启动本地服务器：
      cd C:\Users\levi_\openclaw\survey-web
      python -m http.server 8080
-   □ 浏览器访问：http://localhost:8080/check-firebase-config.html
-   □ 粘贴配置代码，点击验证
-
-   方法 B - 直接测试：
-   □ 访问：http://localhost:8080/generate.html
+   □ 浏览器访问：http://localhost:8080/generate.html
    □ 按 F12 打开控制台
-   □ 查看是否显示 "[Firebase] 初始化成功"
+   □ 查看是否显示：
+     ✅ [Supabase] 配置成功
+   □ 如果显示警告，检查配置是否正确
+   □ 创建问卷并提交测试
+   □ 访问 admin.html 验证数据正常
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-【步骤 6：设置安全规则】
-
-   Firebase Console → Realtime Database → Rules
-
-   测试阶段使用（允许所有人读写）：
-   {
-     "rules": {
-       "surveys": {
-         ".read": true,
-         ".write": true
-       }
-     }
-   }
-
-   □ 粘贴规则代码
-   □ 点击 "Publish"
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-【步骤 7：测试跨设备同步】
-
+【步骤 6：测试跨设备同步】
    电脑端：
    □ 访问 https://levi-lee27.github.io/survey-questions/generate.html
-   □ 创建问卷（例如标题："测试问卷"）
-   □ 填写并提交 2-3 次
-   □ 记录 surveyId（从 URL 或生成器页面）
+   □ 创建问卷
+   □ 提交 2-3 次
+   □ 记录 surveyId
 
    手机端：
-   □ 打开微信扫一扫，扫描问卷二维码
+   □ 用微信扫描问卷二维码
    □ 或直接访问问卷链接
-   □ 填写并提交 1-2 次
+   □ 提交 1-2 次
 
-   电脑端再次验证：
-   □ 访问 https://levi-lee27.github.io/survey-questions/admin.html?surveyId=你的surveyId
+   电脑端验证：
+   □ 访问 admin.html?surveyId=你的surveyId
    □ 看到手机提交的数据 ✅
    □ 右上角显示 "● 云端同步"（绿色）✅
-   □ 提交新问卷时右下角出现通知 ✅
+   □ 提交新数据时右下角弹出通知 ✅
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -131,20 +100,53 @@
    ✅ 所有设备看到相同的数据
    ✅ 无需担心数据丢失
    ✅ 新数据自动推送通知
+   ✅ 无网络时自动降级到本地
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📚 参考文档：
-   • QUICK_START_FIREBASE.md  - 快速开始指南
-   • FIREBASE_INTEGRATION.md  - 详细集成文档
-   • FIREBASE_CONFIG_HELPER.md - 配置助手
-   • GITHUB_PAGES_TEST_PLAN.md - 完整测试计划
+📚 参考文档（在项目文件夹中）：
 
-遇到问题？
-   • 截图配置页面发给我
-   • 复制控制台错误信息
-   • 我会帮你解决！
+  • SUPABASE_QUICK_START.md    快速开始指南（推荐首先阅读）
+  • supabase-config.js         你的配置文件（需要填写）
+  • supabase-config.example.js 配置示例
+  • supabase-client.js         Supabase 客户端封装
+  • README.md                  项目说明
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-现在请开始【步骤 1】，遇到问题随时问我！ 💪
+❓ 遇到问题？
+
+常见问题：
+
+1. 控制台显示 "⚠️ Supabase 未配置"
+   → 检查 supabase-config.js 是否填写完整
+   → 确认 url 和 anonKey 都不为空
+   → 刷新页面重试
+
+2. 权限错误（permission denied）
+   → 检查 Supabase Database → Policies
+   → 确保有 "USING (true)" 的策略
+   → 运行 SUPABASE_QUICK_START.md 中的 SQL
+
+3. 无法写入数据
+   → 检查表是否创建成功（Table Editor）
+   → 确认字段名匹配
+
+4. 实时订阅不工作
+   → 在 Supabase Dashboard → Replication
+   → 确保 "Realtime" 已启用
+
+5. 看不到手机提交的数据
+   → 确认手机和电脑访问同一个 surveyId
+   → 检查 Supabase Database 是否有数据
+   → 查看 Table Editor 中的 submissions 表
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 下一步
+
+现在请开始【步骤 1】：访问 https://supabase.com/ 并创建项目
+
+如果步骤中遇到任何问题，随时问我！我会帮你解决。💪
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

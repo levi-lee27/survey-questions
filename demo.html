@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>问卷系统演示</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+    .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .btn { background: #667eea; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
+    .btn:hover { background: #5a6fd8; }
+    .success { color: green; font-weight: bold; }
+    .info { background: #e6f7ff; padding: 12px; border-radius: 6px; margin: 10px 0; }
+    code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>问卷系统完整演示</h1>
+  
+  <div class="card">
+    <h2>步骤 1: 初始化演示数据</h2>
+    <p>点击下方按钮，将在当前浏览器中创建：</p>
+    <ul>
+      <li>问卷元数据（survey meta）</li>
+      <li>5 条模拟提交记录</li>
+      <li>统计数据</li>
+    </ul>
+    <button class="btn" onclick="initDemo()">初始化数据</button>
+    <div id="initStatus"></div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none;">
+    <h2>步骤 2: 查看统计后台</h2>
+    <p class="success">✅ 数据已创建成功！</p>
+    
+    <div class="info">
+      <strong>问卷信息：</strong><br>
+      标题：评审满意度调查<br>
+      密码：123456<br>
+      Survey ID: <code id="surveyIdDisplay"></code>
+    </div>
+    
+    <p><strong>访问后台统计（无需密码）：</strong></p>
+    <p><a href="#" id="adminLink" target="_blank" class="btn">📊 打开统计后台</a></p>
+    
+    <div class="info">
+      <strong>填写问卷（测试用）：</strong><br>
+      <a href="#" id="surveyLink" target="_blank">📝 打开问卷填写页面</a>
+    </div>
+    
+    <h3>统计预览：</h3>
+    <div id="statsPreview"></div>
+  </div>
+
+  <script>
+    function initDemo() {
+      try {
+        // 生成唯一 Survey ID
+        const surveyId = 'survey_demo_' + Date.now();
+        const title = '评审满意度调查';
+        const password = '123456';
+        
+        // 1. 保存 manager list
+        let manager = JSON.parse(localStorage.getItem('survey_manager_list') || '[]');
+        manager.unshift({
+          surveyId: surveyId,
+          title: title,
+          password: password,
+          createdAt: Date.now(),
+          submissionCount: 0
+        });
+        localStorage.setItem('survey_manager_list', JSON.stringify(manager));
+        
+        // 2. 创建 meta
+        const meta = {
+          surveyId: surveyId,
+          title: title,
+          password: password,
+          createdAt: Date.now(),
+          submissionCount: 0
+        };
+        localStorage.setItem('survey_meta_' + surveyId, JSON.stringify(meta));
+        
+        // 3. 提交 5 条数据
+        const submissions = [
+          { answers: {1:5,2:4,3:5}, suggestion: "非常满意，各项都很优秀" },
+          { answers: {1:4,2:5,3:4}, suggestion: "整体不错，继续保持" },
+          { answers: {1:3,2:3,3:3}, suggestion: "一般水平，有待提升" },
+          { answers: {1:5,2:3,3:2}, suggestion: "业务场景覆盖好，但大纲需要精简" },
+          { answers: {1:2,2:2,3:4}, suggestion: "场景覆盖不足，但编写精炼" }
+        ];
+        
+        const results = submissions.map((sub, idx) => {
+          const total = sub.answers[1]*0.4 + sub.answers[2]*0.4 + sub.answers[3]*0.2;
+          return {
+            id: Date.now() + idx,
+            timestamp: Date.now(),
+            answers: sub.answers,
+            suggestion: sub.suggestion,
+            totalScore: parseFloat(total.toFixed(2))
+          };
+        });
+        
+        localStorage.setItem('survey_results_' + surveyId, JSON.stringify(results));
+        
+        // 更新 meta
+        meta.submissionCount = results.length;
+        meta.lastSubmission = Date.now();
+        localStorage.setItem('survey_meta_' + surveyId, JSON.stringify(meta));
+        
+        // 显示成功
+        document.getElementById('initStatus').innerHTML = '<p class="success">✅ 演示数据创建成功！共 ' + results.length + ' 条提交记录</p>';
+        
+        // 生成链接
+        const baseUrl = window.location.origin + window.location.pathname.replace(/demo\.html$/, '') || './';
+        const adminUrl = baseUrl + 'admin.html?surveyId=' + surveyId;
+        const surveyUrl = baseUrl + 'index.html?surveyId=' + surveyId + '&title=' + encodeURIComponent(title);
+        
+        document.getElementById('surveyIdDisplay').textContent = surveyId;
+        document.getElementById('adminLink').href = adminUrl;
+        document.getElementById('surveyLink').href = surveyUrl;
+        
+        // 计算并显示统计预览
+        const total = results.length;
+        const avg = results.reduce((sum, r) => sum + r.totalScore, 0) / total;
+        const max = Math.max(...results.map(r => r.totalScore));
+        
+        document.getElementById('statsPreview').innerHTML = `
+          <p><strong>总提交数：</strong> ${total}</p>
+          <p><strong>平均分：</strong> ${avg.toFixed(2)}</p>
+          <p><strong>最高分：</strong> ${max.toFixed(2)}</p>
+          <p><strong>各题平均分：</strong></p>
+          <ul>
+            <li>业务场景覆盖：${(results.reduce((s,r)=>s+r.answers[1]*0.4,0)/total).toFixed(2)} 分</li>
+            <li>大纲覆盖需求：${(results.reduce((s,r)=>s+r.answers[2]*0.4,0)/total).toFixed(2)} 分</li>
+            <li>大纲编写精炼：${(results.reduce((s,r)=>s+r.answers[3]*0.2,0)/total).toFixed(2)} 分</li>
+          </ul>
+        `;
+        
+        document.getElementById('resultCard').style.display = 'block';
+        
+      } catch (e) {
+        document.getElementById('initStatus').innerHTML = '<p style="color:red;">❌ 错误: ' + e.message + '</p>';
+      }
+    }
+  </script>
+</body>
+</html>

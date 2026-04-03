@@ -1,0 +1,15 @@
+{
+  "deploy_url": "https://levi-lee27.github.io/survey-questions",
+  "status": "ready_for_deployment",
+  "files_required": [
+    "index.html",
+    "admin.html",
+    "generate.html",
+    "app.js",
+    "admin.js",
+    "styles.css",
+    "admin-styles.css"
+  ],
+  "test_completed": true,
+  "integration_test_passed": true
+}

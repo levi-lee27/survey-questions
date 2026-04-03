@@ -160,31 +160,24 @@ async function saveSurvey(surveyId, data) {
 
     localStorage.setItem(metaKey, JSON.stringify(meta))
 
-    console.log('[localStorage] 数据已保存:', { surveyId, total: results.length })
+    console.log('[localStorage] 数据已保存:', { surveyId, total: results.length });
 
-    // 2. 同步到 Firebase（如果已配置）
-    if (window.database && firebaseConfig && firebaseConfig.apiKey) {
+    // 2. 同步到 Supabase（如果已配置）
+    if (typeof supabaseSaveSubmission === 'function') {
       try {
-        const resultRef = window.database.ref(`surveys/${surveyId}/results/${data.id}`);
-        await resultRef.set(data);
-
-        // 更新元数据
-        await window.database.ref(`surveys/${surveyId}/meta`).set({
-          surveyId: surveyId,
-          title: meta.title,
-          password: meta.password || '',
-          createdAt: meta.createdAt,
-          submissionCount: meta.submissionCount,
-          lastSubmission: meta.lastSubmission
-        });
-
-        console.log('[Firebase] 数据已同步到云端');
-      } catch (firebaseError) {
-        console.warn('[Firebase] 同步失败，仅保存在本地:', firebaseError.message);
+        // 调用 Supabase 保存，它会自动更新计数
+        const result = await supabaseSaveSubmission(surveyId, data);
+        if (result.error) {
+          console.warn('[Supabase] 同步失败，仅保存在本地:', result.error);
+        } else {
+          console.log('[Supabase] 数据已同步到云端');
+        }
+      } catch (supabaseError) {
+        console.warn('[Supabase] 同步异常，仅保存在本地:', supabaseError.message);
       }
     }
 
-    return true
+    return true;
   } catch (e) {
     console.error('保存失败:', e)
     return false

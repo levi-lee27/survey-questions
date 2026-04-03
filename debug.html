@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>问卷系统诊断工具</title>
+  <style>
+    body { font-family: monospace; padding: 20px; max-width: 800px; margin: 0 auto; }
+    input, button { padding: 8px; margin: 5px 0; }
+    pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    .ok { color: green; }
+    .error { color: red; }
+    .warn { color: orange; }
+  </style>
+</head>
+<body>
+  <h1>问卷系统诊断工具</h1>
+  
+  <div>
+    <label>Survey ID:</label><br>
+    <input type="text" id="surveyId" placeholder="输入 surveyId (例如: survey_xxx)" style="width:100%">
+    <button onclick="diagnose()">诊断</button>
+  </div>
+
+  <div id="output" style="margin-top:20px;"></div>
+
+  <script>
+    function diagnose() {
+      const surveyId = document.getElementById('surveyId').value.trim();
+      if (!surveyId) {
+        alert('请输入 surveyId');
+        return;
+      }
+
+      const output = document.getElementById('output');
+      let html = '<h2>诊断结果</h2>';
+      
+      // 当前 origin
+      html += '<p><strong>当前域名:</strong> ' + window.location.origin + '</p>';
+      html += '<p><strong>LocalStorage 可用:</strong> ' + (typeof(Storage) !== 'undefined' ? '✅' : '❌') + '</p>';
+      
+      // 列出所有 survey 键
+      const keys = Object.keys(localStorage).filter(k => k.includes('survey'));
+      html += '<h3>LocalStorage 中的问卷键:</h3>';
+      if (keys.length === 0) {
+        html += '<p class="error">⚠️ 没有找到任何问卷数据</p>';
+      } else {
+        html += '<ul>';
+        keys.forEach(k => {
+          const val = localStorage.getItem(k);
+          let preview = '';
+          try {
+            if (val.length > 100) preview = val.substring(0, 100) + '...';
+            else preview = val;
+          } catch(e) { preview = '(无法读取)'; }
+          html += `<li><code>${k}</code>: ${preview}</li>`;
+        });
+        html += '</ul>';
+      }
+      
+      // 检查特定 surveyId
+      const metaKey = 'survey_meta_' + surveyId;
+      const metaRaw = localStorage.getItem(metaKey);
+      html += '<h3>问卷 Meta 数据:</h3>';
+      if (!metaRaw) {
+        html += '<p class="error">❌ <strong>Meta 不存在!</strong></p>';
+        html += '<p>可能原因:</p><ul>';
+        html += '<li>问卷尚未创建（请先在 generate.html 创建）</li>';
+        html += '<li>使用了不同的浏览器或设备（localStorage 隔离）</li>';
+        html += '<li>localStorage 已清空</li>';
+        html += '<li>surveyId 不正确</li>';
+        html += '</ul>';
+      } else {
+        try {
+          const meta = JSON.parse(metaRaw);
+          html += '<pre class="ok">' + JSON.stringify(meta, null, 2) + '</pre>';
+          
+          // 检查结果数据
+          const resultsKey = 'survey_results_' + surveyId;
+          const resultsRaw = localStorage.getItem(resultsKey);
+          if (resultsRaw) {
+            const results = JSON.parse(resultsRaw);
+            html += `<p><strong>提交数量:</strong> ${results.length}</p>`;
+            if (results.length > 0) {
+              html += '<h4>最新提交:</h4><pre>' + JSON.stringify(results[results.length-1], null, 2) + '</pre>';
+            }
+          } else {
+            html += '<p class="warn">⚠️ 没有提交记录</p>';
+          }
+        } catch(e) {
+          html += '<p class="error">解析 meta 失败: ' + e.message + '</p>';
+        }
+      }
+      
+      // 管理器列表
+      const manager = localStorage.getItem('survey_manager_list');
+      html += '<h3>问卷管理器列表:</h3>';
+      if (manager) {
+        try {
+          const surveys = JSON.parse(manager);
+          html += `<p>共 ${surveys.length} 个问卷</p><ul>`;
+          surveys.forEach(s => {
+            const match = s.surveyId === surveyId ? '✅' : '';
+            html += `<li>${match} ${s.title} (ID: ${s.surveyId}, 密码: ${s.password||'无'}, 提交数: ${s.submissionCount})</li>`;
+          });
+          html += '</ul>';
+        } catch(e) {
+          html += '<p class="error">解析失败</p>';
+        }
+      } else {
+        html += '<p class="error">⚠️ 管理器列表为空</p>';
+      }
+      
+      output.innerHTML = html;
+    }
+  </script>
+</body>
+</html>

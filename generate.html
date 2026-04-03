@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>问卷二维码生成器</title>
-  <!-- Firebase SDK (云端数据同步) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Supabase SDK (云端数据同步) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase-client.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -400,19 +400,17 @@
       }
       localStorage.setItem(metaKey, JSON.stringify(meta))
 
-      // 同时保存到 Firebase（如果已配置）
-      if (window.database && firebaseConfig && firebaseConfig.apiKey) {
-        window.database.ref(`surveys/${surveyId}/meta`).set({
-          surveyId: surveyId,
+      // 同时保存到 Supabase（如果已配置）
+      if (typeof supabaseSaveSurveyMeta === 'function') {
+        // 使用统一的保存函数
+        supabaseSaveSurveyMeta(surveyId, {
           title: title,
           password: password,
-          createdAt: meta.createdAt,
+          createdAt: meta.createdAt || new Date().toISOString(),
           submissionCount: 0,
           lastSubmission: null
-        }).then(() => {
-          console.log('[Firebase] Meta 已保存');
         }).catch(err => {
-          console.warn('[Firebase] Meta 保存失败:', err);
+          console.warn('[Supabase] Meta 保存失败:', err);
         });
       }
 

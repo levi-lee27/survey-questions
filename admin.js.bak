@@ -11,7 +11,7 @@ let allRecords = []
 let filteredRecords = []
 let currentPage = 1
 const pageSize = 10
-let supabaseUnsubscribe = null  // 取消订阅函数
+let firebaseListenerAttached = false  // 防止重复添加监听器
 
 // 获取 URL 参数
 function getUrlParam(name) {
@@ -21,27 +21,31 @@ function getUrlParam(name) {
 
 // 直接加载并显示统计（无需密码验证）
 async function loadStatistics() {
-  const surveyId = getUrlParam('surveyId');
+  const surveyId = getUrlParam('surveyId')
 
   if (!surveyId) {
-    alert('缺少 surveyId 参数，请通过问卷生成的链接访问');
-    window.location.href = 'generate.html';
-    return;
+    alert('缺少 surveyId 参数，请通过问卷生成的链接访问')
+    window.location.href = 'generate.html'
+    return
   }
 
-  currentSurveyId = surveyId;
+  currentSurveyId = surveyId
 
-  // 1. 尝试从 Supabase 加载 meta
-  let meta = null;
-  if (typeof supabaseLoadSurveyMeta === 'function') {
-    const result = await supabaseLoadSurveyMeta(surveyId);
-    if (!result.error && result.data) {
-      meta = result.data;
-      console.log('[Supabase] Meta loaded:', meta);
+  // 1. 尝试从 Firebase 加载 meta
+  let meta = null
+  if (window.database && firebaseConfig && firebaseConfig.apiKey) {
+    try {
+      const metaSnapshot = await window.database.ref(`surveys/${surveyId}/meta`).once('value');
+      if (metaSnapshot.exists()) {
+        meta = metaSnapshot.val();
+        console.log('[Firebase] Meta loaded:', meta);
+      }
+    } catch (e) {
+      console.warn('[Firebase] 加载 meta 失败:', e);
     }
   }
 
-  // 2. 如果 Supabase 没有，尝试从 localStorage 加载
+  // 2. 如果 Firebase 没有，尝试从 localStorage 加载
   if (!meta) {
     const metaKey = 'survey_meta_' + surveyId;
     const metaRaw = localStorage.getItem(metaKey);
@@ -52,89 +56,125 @@ async function loadStatistics() {
   }
 
   if (!meta) {
-    // meta 不存在
-    document.getElementById('surveyTitleDisplay').textContent = '问卷不存在';
-    document.getElementById('surveyIdDisplay').textContent = surveyId;
-    document.getElementById('totalCount').textContent = '-';
-    document.getElementById('averageScore').textContent = '-';
-    document.getElementById('maxScore').textContent = '-';
-    document.getElementById('questionStats').innerHTML = '<div class="no-data-message">⚠️ 问卷不存在或尚未创建<br><br>请先访问 generate.html 创建问卷，然后填写提交。<br>注意：如果已经创建，请确保在同一浏览器中访问。</div>';
-    document.getElementById('recordsList').innerHTML = '';
-    return;
+    // meta 不存在，说明问卷尚未创建或 localStorage 被清空
+    // 显示友好提示
+    document.getElementById('surveyTitleDisplay').textContent = '问卷不存在'
+    document.getElementById('surveyIdDisplay').textContent = surveyId
+    document.getElementById('totalCount').textContent = '-'
+    document.getElementById('averageScore').textContent = '-'
+    document.getElementById('maxScore').textContent = '-'
+    document.getElementById('questionStats').innerHTML = '<div class="no-data-message">⚠️ 问卷不存在或尚未创建<br><br>请先访问 generate.html 创建问卷，然后填写提交。<br>注意：如果已经创建，请确保在同一浏览器中访问。</div>'
+    document.getElementById('recordsList').innerHTML = ''
+    return
   }
 
-  document.getElementById('surveyTitleDisplay').textContent = meta.title || '未命名问卷';
-  document.getElementById('surveyIdDisplay').textContent = surveyId;
+  document.getElementById('surveyTitleDisplay').textContent = meta.title || '未命名问卷'
+  document.getElementById('surveyIdDisplay').textContent = surveyId
 
   // 显示统计面板
-  document.getElementById('statsPanel').style.display = 'block';
+  document.getElementById('statsPanel').style.display = 'block'
 
   // 显示连接状态
-  if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+  if (window.database && firebaseConfig && firebaseConfig.apiKey) {
     showConnectionStatus('connected', '实时同步已启用');
   } else {
     showConnectionStatus('local', '仅本地数据（无云端同步）');
   }
 
-  // 加载数据（支持 Supabase 实时订阅）
-  await loadData();
+  // 加载数据（支持 Firebase 实时监听）
+  await loadData()
 }
 
-
-
-// 加载数据 - 支持 Supabase 实时订阅
+// 加载数据 - 支持 Firebase 实时同步
 async function loadData() {
-  // 如果 Supabase 可用，优先从 Supabase 加载
-  if (typeof supabaseLoadSubmissions === 'function') {
+  // 如果 Firebase 可用，优先从 Firebase 加载
+  if (window.database && firebaseConfig && firebaseConfig.apiKey) {
     try {
-      console.log('[Supabase] 开始加载数据...');
+      console.log('[Firebase] 开始加载数据...');
 
-      // 设置实时订阅（只设置一次）
-      if (!supabaseUnsubscribe) {
-        supabaseUnsubscribe = supabaseSubscribeToSurvey(currentSurveyId, (payload) => {
-          console.log('[Supabase] 数据变更:', payload.eventType);
-          loadData(false);
+      // 只添加一次监听器
+      if (!firebaseListenerAttached) {
+        const resultsRef = window.database.ref(`surveys/${currentSurveyId}/results`);
+
+        resultsRef.on('child_added', (snapshot) => {
+          console.log('[Firebase] 新提交:', snapshot.val());
+          loadData(false); // 重新加载但不递归添加监听器
           showNotification('新提交已同步');
         });
+
+        resultsRef.on('child_changed', (snapshot) => {
+          console.log('[Firebase] 数据更新:', snapshot.val());
+          loadData(false);
+        });
+
+        resultsRef.on('child_removed', (snapshot) => {
+          console.log('[Firebase] 数据删除:', snapshot.val());
+          loadData(false);
+        });
+
+        firebaseListenerAttached = true;
       }
 
-      // 加载所有数据
-      const result = await supabaseLoadSubmissions(currentSurveyId);
-      if (!result.error && result.data) {
-        allRecords = result.data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        console.log('[Supabase] 加载了', allRecords.length, '条记录');
+      const snapshot = await window.database.ref(`surveys/${currentSurveyId}/results`).once('value');
+      const results = snapshot.val();
+
+      if (results) {
+        allRecords = Object.values(results).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        console.log('[Firebase] 加载了', allRecords.length, '条记录');
       } else {
         allRecords = [];
-        console.log('[Supabase] 暂无数据或加载失败:', result.error);
+        console.log('[Firebase] 暂无数据');
       }
 
       filteredRecords = [...allRecords];
       renderAll();
 
-    } catch (error) {
-      console.error('[Supabase] 加载失败，降级到 localStorage:', error);
+    } catch (firebaseError) {
+      console.error('[Firebase] 加载失败，降级到 localStorage:', firebaseError);
+      // 降级到 localStorage
       loadLocalData();
     }
   } else {
-    // Supabase 未配置，使用 localStorage
+    // Firebase 未配置，使用 localStorage
     loadLocalData();
   }
 }
 
-// 重新加载（不重复订阅）
-async function reloadData() {
-  if (typeof supabaseLoadSubmissions === 'function') {
+// 重新加载数据（不添加监听器，用于监听器回调）
+async function loadData(attachListeners = true) {
+  if (window.database && firebaseConfig && firebaseConfig.apiKey) {
     try {
-      const result = await supabaseLoadSubmissions(currentSurveyId);
-      if (!result.error && result.data) {
-        allRecords = result.data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      if (attachListeners && !firebaseListenerAttached) {
+        const resultsRef = window.database.ref(`surveys/${currentSurveyId}/results`);
+        resultsRef.on('child_added', (snapshot) => {
+          console.log('[Firebase] 新提交:', snapshot.val());
+          loadData(false);
+          showNotification('新提交已同步');
+        });
+        resultsRef.on('child_changed', (snapshot) => {
+          console.log('[Firebase] 数据更新:', snapshot.val());
+          loadData(false);
+        });
+        resultsRef.on('child_removed', (snapshot) => {
+          console.log('[Firebase] 数据删除:', snapshot.val());
+          loadData(false);
+        });
+        firebaseListenerAttached = true;
+      }
+
+      const snapshot = await window.database.ref(`surveys/${currentSurveyId}/results`).once('value');
+      const results = snapshot.val();
+
+      if (results) {
+        allRecords = Object.values(results).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       } else {
         allRecords = [];
       }
       filteredRecords = [...allRecords];
       renderAll();
-    } catch (error) {
-      console.error('[Supabase] 重新加载失败:', error);
+    } catch (firebaseError) {
+      console.error('[Firebase] 加载失败:', firebaseError);
+      loadLocalData();
     }
   } else {
     loadLocalData();
@@ -144,20 +184,68 @@ async function reloadData() {
 // 从 localStorage 加载数据（降级方案）
 function loadLocalData() {
   try {
-    const key = 'survey_results_' + currentSurveyId;
-    const stored = localStorage.getItem(key);
-    allRecords = stored ? JSON.parse(stored) : [];
-    filteredRecords = [...allRecords];
-    renderAll();
+    const key = 'survey_results_' + currentSurveyId
+    const stored = localStorage.getItem(key)
+    allRecords = stored ? JSON.parse(stored) : []
+    filteredRecords = [...allRecords]
+    renderAll()
     console.log('[localStorage] 加载了', allRecords.length, '条记录');
   } catch (e) {
-    console.error('加载数据失败:', e);
-    allRecords = [];
-    filteredRecords = [];
-    renderAll();
+    console.error('加载数据失败:', e)
+    allRecords = []
+    filteredRecords = []
+    renderAll()
   }
 }
 
+// 监听筛选事件
+document.addEventListener('DOMContentLoaded', () => {
+  // 直接加载统计数据（无需密码验证）
+  loadStatistics()
+
+  // 绑定筛选事件
+  document.getElementById('searchInput')?.addEventListener('input', debounce(handleFilter, 300))
+  document.getElementById('sortSelect')?.addEventListener('change', handleFilter)
+})
+
+// 防抖
+function debounce(fn, delay) {
+  let timer = null
+  return function () {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(fn, delay)
+  }
+}
+
+// 处理筛选
+function handleFilter() {
+  const searchText = document.getElementById('searchInput')?.value.toLowerCase() || ''
+  const sortBy = document.getElementById('sortSelect')?.value || 'time-desc'
+
+  filteredRecords = allRecords.filter(record => {
+    if (!searchText) return true
+    const suggestion = record.suggestion || ''
+    return suggestion.toLowerCase().includes(searchText)
+  })
+
+  filteredRecords.sort((a, b) => {
+    switch (sortBy) {
+      case 'time-desc':
+        return new Date(b.timestamp) - new Date(a.timestamp)
+      case 'time-asc':
+        return new Date(a.timestamp) - new Date(b.timestamp)
+      case 'score-desc':
+        return b.totalScore - a.totalScore
+      case 'score-asc':
+        return a.totalScore - b.totalScore
+      default:
+        return 0
+    }
+  })
+
+  currentPage = 1
+  renderAll()
+}
 
 // 渲染所有内容
 function renderAll() {
@@ -399,13 +487,18 @@ async function clearAllData() {
     meta.lastSubmission = null
     localStorage.setItem(metaKey, JSON.stringify(meta))
 
-    // 2. 如果 Supabase 可用，同时清空云端数据
-    if (typeof supabaseClearSurvey === 'function') {
+    // 2. 如果 Firebase 可用，同时清空云端数据
+    if (window.database && firebaseConfig && firebaseConfig.apiKey) {
       try {
-        await supabaseClearSurvey(currentSurveyId);
-        console.log('[Supabase] 数据已清空');
-      } catch (supabaseError) {
-        console.warn('[Supabase] 清空失败:', supabaseError);
+        await window.database.ref(`surveys/${currentSurveyId}/results`).remove();
+        await window.database.ref(`surveys/${currentSurveyId}/meta`).set({
+          ...meta,
+          submissionCount: 0,
+          lastSubmission: null
+        });
+        console.log('[Firebase] 数据已清空');
+      } catch (firebaseError) {
+        console.warn('[Firebase] 清空失败:', firebaseError);
       }
     }
 
@@ -464,14 +557,7 @@ function showNotification(message) {
 }
 
 // 全局方法（供 HTML 调用）
-window.goToPage = goToPage;
-window.exportCSV = exportCSV;
-window.clearAllData = clearAllData;
-window.closeModal = closeModal;
-
-// 页面卸载时取消订阅
-window.addEventListener('beforeunload', () => {
-  if (supabaseUnsubscribe) {
-    supabaseUnsubscribe();
-  }
-});
+window.goToPage = goToPage
+window.exportCSV = exportCSV
+window.clearAllData = clearAllData
+window.closeModal = closeModal
