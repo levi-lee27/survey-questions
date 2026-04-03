@@ -35,24 +35,36 @@ function verifyToken() {
     return
   }
 
-  if (!token) {
-    showError('请输入管理员密码')
-    return
-  }
-
   // 检查 meta 中的密码
   const metaKey = 'survey_meta_' + surveyId
   const metaRaw = localStorage.getItem(metaKey)
   if (!metaRaw) {
-    showError('问卷不存在或尚未创建')
+    showError('问卷不存在或尚未创建\n\n请先填写问卷，然后才能查看统计')
     return
   }
 
   const meta = JSON.parse(metaRaw)
 
-  // 如果有密码保护，验证密码
-  if (meta.password && meta.password !== token) {
-    showError('密码错误')
+  // 如果问卷没有设置密码，直接进入（不需要 token）
+  if (!meta.password) {
+    currentSurveyId = surveyId
+    currentToken = ''
+    document.getElementById('surveyTitleDisplay').textContent = meta.title || '未命名问卷'
+    document.getElementById('surveyIdDisplay').textContent = surveyId
+    showPanel('stats')
+    loadData()
+    return
+  }
+
+  // 有密码保护，必须提供 token
+  if (!token) {
+    showError('请输入管理员密码')
+    return
+  }
+
+  // 验证密码是否匹配
+  if (meta.password !== token) {
+    showError('密码错误\n\n请检查 generate.html 中设置的密码')
     return
   }
 
