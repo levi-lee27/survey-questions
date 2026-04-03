@@ -370,9 +370,33 @@
         submissionCount: 0
       }
 
+      // 保存到问卷管理器
       const surveys = loadSurveyList()
       surveys.unshift(survey)
       saveSurveyList(surveys)
+
+      // 【关键修复】同步创建/更新 meta 数据
+      // 这确保 admin.html 在问卷创建后立即可访问（即使还没有提交）
+      const metaKey = 'survey_meta_' + surveyId
+      let meta = localStorage.getItem(metaKey)
+      if (meta) {
+        meta = JSON.parse(meta)
+        // 如果已有 meta，同步最新标题和密码
+        meta.title = title
+        if (password && !meta.password) {
+          meta.password = password
+        }
+      } else {
+        meta = {
+          surveyId: surveyId,
+          title: title,
+          password: password,
+          createdAt: new Date().toISOString(),
+          submissionCount: 0
+        }
+      }
+      localStorage.setItem(metaKey, JSON.stringify(meta))
+      console.log('[DEBUG] Synced meta for survey:', surveyId, 'password:', meta.password ? '***' : '(none)')
 
       const baseUrl = getBaseUrl()
       console.log('[DEBUG] Base URL:', baseUrl)
