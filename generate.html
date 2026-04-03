@@ -231,6 +231,11 @@
         <input type="text" id="surveyTitle" placeholder="例如：代码评审满意度调查" value="评审满意度调查">
       </div>
       <div class="form-group">
+        <label for="deployUrl">问卷部署地址（可选）</label>
+        <input type="text" id="deployUrl" placeholder="例如：https://your-domain.com 或 http://localhost:8080">
+        <div class="help-text">用于生成完整的问卷链接。留空则自动使用当前页面地址</div>
+      </div>
+      <div class="form-group">
         <label for="adminPassword">管理员密码</label>
         <input type="text" id="adminPassword" placeholder="设置后台查看密码（可选）">
         <div class="help-text">用于保护统计数据，不设密码则任何人可查看</div>
@@ -322,7 +327,15 @@
 
     // 获取基础 URL，支持多种部署方式
     function getBaseUrl() {
-      // 如果是 file:// 协议，直接返回空字符串（相对路径）
+      // 优先使用用户自定义的部署地址
+      const customUrl = document.getElementById('deployUrl').value.trim()
+      if (customUrl) {
+        // 确保以 / 结尾
+        return customUrl.endsWith('/') ? customUrl : customUrl + '/'
+      }
+
+      // 如果没有自定义，使用当前页面的 origin
+      // 对于 file:// 协议，返回空字符串（相对路径）
       if (window.location.protocol === 'file:') {
         return ''
       }
@@ -330,8 +343,8 @@
       const origin = window.location.origin
       const pathname = window.location.pathname
 
-      // 如果当前页面在子目录中（如 /survey-web/generate.html）
-      // 返回根路径或正确的部署基础路径
+      // 如果当前页面在子目录中，返回子目录路径
+      // 例如：/survey-web/generate.html -> /survey-web/
       const parts = pathname.split('/').filter(p => p)
 
       // 如果只有文件名（如 /generate.html），返回根路径
@@ -339,8 +352,7 @@
         return origin + '/'
       }
 
-      // 如果在子目录，返回子目录路径
-      // 例如：/survey-web/generate.html -> /survey-web/
+      // 返回子目录路径
       const subPath = parts.slice(0, -1).join('/')
       return `${origin}/${subPath}/`
     }
@@ -364,6 +376,17 @@
 
       const baseUrl = getBaseUrl()
       console.log('[DEBUG] Base URL:', baseUrl)
+
+      // 验证 baseUrl 是否有效
+      if (!baseUrl) {
+        alert('❌ 无法生成有效链接：\n\n当前为本地文件模式(file://)，请在上方"问卷部署地址"中输入完整的服务器地址。\n\n例如：\n- http://localhost:8080/\n- https://your-domain.com/\n- https://your-site.github.io/')
+        return
+      }
+
+      if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+        alert('❌ 部署地址格式错误：\n\n必须以 http:// 或 https:// 开头\n\n当前值：' + baseUrl)
+        return
+      }
 
       const surveyUrl = `${baseUrl}index.html?surveyId=${surveyId}&title=${encodeURIComponent(title)}`
       const adminUrl = `${baseUrl}admin.html?surveyId=${surveyId}${password ? '&token=' + encodeURIComponent(password) : ''}`
@@ -445,17 +468,31 @@
 
     function copySurveyLink(surveyId) {
       const baseUrl = getBaseUrl()
+      if (!baseUrl) {
+        alert('请先在上方填写"问卷部署地址"')
+        return
+      }
       const survey = loadSurveyList().find(s => s.surveyId === surveyId)
       if (survey) {
         const url = `${baseUrl}index.html?surveyId=${surveyId}&title=${encodeURIComponent(survey.title)}`
         navigator.clipboard.writeText(url).then(() => {
           alert('问卷链接已复制')
+        }).catch(() => {
+          prompt('复制失败，手动复制:', url)
         })
       }
     }
 
     function openAdmin(surveyId, password) {
       const baseUrl = getBaseUrl()
+      if (!baseUrl) {
+        alert('请先在上方填写"问卷部署地址"')
+        return
+      }
+      if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+        alert('部署地址必须以 http:// 或 https:// 开头')
+        return
+      }
       let url = `${baseUrl}admin.html?surveyId=${surveyId}`
       if (password) {
         url += '&token=' + encodeURIComponent(password)
