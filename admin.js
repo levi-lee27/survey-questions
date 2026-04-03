@@ -11,6 +11,7 @@ let allRecords = []
 let filteredRecords = []
 let currentPage = 1
 const pageSize = 10
+let firebaseListenerAttached = false  // 防止重复添加监听器
 
 // 获取 URL 参数
 function getUrlParam(name) {
@@ -19,7 +20,7 @@ function getUrlParam(name) {
 }
 
 // 直接加载并显示统计（无需密码验证）
-function loadStatistics() {
+async function loadStatistics() {
   const surveyId = getUrlParam('surveyId')
 
   if (!surveyId) {
@@ -28,10 +29,33 @@ function loadStatistics() {
     return
   }
 
-  const metaKey = 'survey_meta_' + surveyId
-  const metaRaw = localStorage.getItem(metaKey)
+  currentSurveyId = surveyId
 
-  if (!metaRaw) {
+  // 1. 尝试从 Firebase 加载 meta
+  let meta = null
+  if (window.database && firebaseConfig && firebaseConfig.apiKey) {
+    try {
+      const metaSnapshot = await window.database.ref(`surveys/${surveyId}/meta`).once('value');
+      if (metaSnapshot.exists()) {
+        meta = metaSnapshot.val();
+        console.log('[Firebase] Meta loaded:', meta);
+      }
+    } catch (e) {
+      console.warn('[Firebase] 加载 meta 失败:', e);
+    }
+  }
+
+  // 2. 如果 Firebase 没有，尝试从 localStorage 加载
+  if (!meta) {
+    const metaKey = 'survey_meta_' + surveyId;
+    const metaRaw = localStorage.getItem(metaKey);
+    if (metaRaw) {
+      meta = JSON.parse(metaRaw);
+      console.log('[localStorage] Meta loaded:', meta);
+    }
+  }
+
+  if (!meta) {
     // meta 不存在，说明问卷尚未创建或 localStorage 被清空
     // 显示友好提示
     document.getElementById('surveyTitleDisplay').textContent = '问卷不存在'
@@ -44,27 +68,74 @@ function loadStatistics() {
     return
   }
 
-  const meta = JSON.parse(metaRaw)
-  currentSurveyId = surveyId
-
   document.getElementById('surveyTitleDisplay').textContent = meta.title || '未命名问卷'
   document.getElementById('surveyIdDisplay').textContent = surveyId
 
   // 显示统计面板
   document.getElementById('statsPanel').style.display = 'block'
 
-  // 加载数据
-  loadData()
+  // 显示连接状态
+  if (window.database && firebaseConfig && firebaseConfig.apiKey) {
+    showConnectionStatus('connected', '实时同步已启用');
+  } else {
+    showConnectionStatus('local', '仅本地数据（无云端同步）');
+  }
+
+  // 加载数据（支持 Firebase 实时监听）
+  await loadData()
 }
 
-// 加载数据
-function loadData() {
+
+// 重新加载数据（不添加监听器，用于监听器回调）
+async function loadData(attachListeners = true) {
+  if (window.database && firebaseConfig && firebaseConfig.apiKey) {
+    try {
+      if (attachListeners && !firebaseListenerAttached) {
+        const resultsRef = window.database.ref(`surveys/${currentSurveyId}/results`);
+        resultsRef.on('child_added', (snapshot) => {
+          console.log('[Firebase] 新提交:', snapshot.val());
+          loadData(false);
+          showNotification('新提交已同步');
+        });
+        resultsRef.on('child_changed', (snapshot) => {
+          console.log('[Firebase] 数据更新:', snapshot.val());
+          loadData(false);
+        });
+        resultsRef.on('child_removed', (snapshot) => {
+          console.log('[Firebase] 数据删除:', snapshot.val());
+          loadData(false);
+        });
+        firebaseListenerAttached = true;
+      }
+
+      const snapshot = await window.database.ref(`surveys/${currentSurveyId}/results`).once('value');
+      const results = snapshot.val();
+
+      if (results) {
+        allRecords = Object.values(results).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      } else {
+        allRecords = [];
+      }
+      filteredRecords = [...allRecords];
+      renderAll();
+    } catch (firebaseError) {
+      console.error('[Firebase] 加载失败:', firebaseError);
+      loadLocalData();
+    }
+  } else {
+    loadLocalData();
+  }
+}
+
+// 从 localStorage 加载数据（降级方案）
+function loadLocalData() {
   try {
     const key = 'survey_results_' + currentSurveyId
     const stored = localStorage.getItem(key)
     allRecords = stored ? JSON.parse(stored) : []
     filteredRecords = [...allRecords]
     renderAll()
+    console.log('[localStorage] 加载了', allRecords.length, '条记录');
   } catch (e) {
     console.error('加载数据失败:', e)
     allRecords = []
@@ -348,8 +419,9 @@ function exportCSV() {
 }
 
 // 清空数据
-function clearAllData() {
-  showModal('确认清空', '确定要清空当前问卷的所有数据吗？此操作不可恢复。', () => {
+async function clearAllData() {
+  showModal('确认清空', '确定要清空当前问卷的所有数据吗？此操作不可恢复。', async () => {
+    // 1. 清空 localStorage
     const key = 'survey_results_' + currentSurveyId
     localStorage.removeItem(key)
 
@@ -361,8 +433,23 @@ function clearAllData() {
     meta.lastSubmission = null
     localStorage.setItem(metaKey, JSON.stringify(meta))
 
-    loadData()
-    alert('数据已清空')
+    // 2. 如果 Firebase 可用，同时清空云端数据
+    if (window.database && firebaseConfig && firebaseConfig.apiKey) {
+      try {
+        await window.database.ref(`surveys/${currentSurveyId}/results`).remove();
+        await window.database.ref(`surveys/${currentSurveyId}/meta`).set({
+          ...meta,
+          submissionCount: 0,
+          lastSubmission: null
+        });
+        console.log('[Firebase] 数据已清空');
+      } catch (firebaseError) {
+        console.warn('[Firebase] 清空失败:', firebaseError);
+      }
+    }
+
+    loadData();
+    alert('数据已清空');
   })
 }
 
@@ -383,6 +470,36 @@ function showModal(title, message, onConfirm) {
 
 function closeModal() {
   document.getElementById('confirmModal').classList.remove('show')
+}
+
+// 显示连接状态
+function showConnectionStatus(status, message) {
+  const el = document.getElementById('connectionStatus');
+  if (!el) return;
+
+  el.className = 'connection-status ' + status;
+  el.innerHTML = status === 'connected' ? '● 云端同步' :
+                 status === 'local' ? '● 本地模式' :
+                 status === 'error' ? '● 同步失败' : message;
+  el.style.display = 'flex';
+}
+
+// 显示同步通知
+function showNotification(message) {
+  const el = document.getElementById('syncNotification');
+  if (!el) return;
+
+  el.querySelector('.sync-text').textContent = message;
+  el.style.display = 'flex';
+
+  // 3秒后自动隐藏
+  setTimeout(() => {
+    el.classList.add('hiding');
+    setTimeout(() => {
+      el.style.display = 'none';
+      el.classList.remove('hiding');
+    }, 300);
+  }, 3000);
 }
 
 // 全局方法（供 HTML 调用）

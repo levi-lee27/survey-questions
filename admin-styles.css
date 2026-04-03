@@ -634,3 +634,85 @@ body {
   background: #d9f7be;
   color: #52c41a;
 }
+
+/* 连接状态指示器 */
+.connection-status {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.connection-status.connected {
+  background: #d9f7be;
+  color: #52c41a;
+}
+
+.connection-status.local {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.connection-status.error {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+/* 实时同步通知 */
+.sync-notification {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: #52c41a;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideInRight 0.3s ease-out;
+  z-index: 1000;
+}
+
+.sync-notification .sync-icon {
+  font-size: 18px;
+}
+
+.sync-notification .sync-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.sync-notification.hiding {
+  animation: slideOutRight 0.3s ease-out forwards;
+}

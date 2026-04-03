@@ -121,9 +121,10 @@ function calculateScore(answers) {
   }
 }
 
-// 保存数据（按 surveyId 分隔）
-function saveSurvey(surveyId, data) {
+// 保存数据（按 surveyId 分隔）- 支持本地 + Firebase
+async function saveSurvey(surveyId, data) {
   try {
+    // 1. 保存到 localStorage（本地缓存）
     const key = 'survey_results_' + surveyId
     const stored = localStorage.getItem(key)
     const results = stored ? JSON.parse(stored) : []
@@ -159,7 +160,30 @@ function saveSurvey(surveyId, data) {
 
     localStorage.setItem(metaKey, JSON.stringify(meta))
 
-    console.log('数据已保存:', { surveyId, total: results.length, meta })
+    console.log('[localStorage] 数据已保存:', { surveyId, total: results.length })
+
+    // 2. 同步到 Firebase（如果已配置）
+    if (window.database && firebaseConfig && firebaseConfig.apiKey) {
+      try {
+        const resultRef = window.database.ref(`surveys/${surveyId}/results/${data.id}`);
+        await resultRef.set(data);
+
+        // 更新元数据
+        await window.database.ref(`surveys/${surveyId}/meta`).set({
+          surveyId: surveyId,
+          title: meta.title,
+          password: meta.password || '',
+          createdAt: meta.createdAt,
+          submissionCount: meta.submissionCount,
+          lastSubmission: meta.lastSubmission
+        });
+
+        console.log('[Firebase] 数据已同步到云端');
+      } catch (firebaseError) {
+        console.warn('[Firebase] 同步失败，仅保存在本地:', firebaseError.message);
+      }
+    }
+
     return true
   } catch (e) {
     console.error('保存失败:', e)

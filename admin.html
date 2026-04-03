@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>统计后台 - 评审满意度调查</title>
   <link rel="stylesheet" href="admin-styles.css">
+  <!-- Firebase SDK (云端数据同步) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
 </head>
 <body>
   <div class="container">
@@ -17,6 +21,7 @@
         <div class="survey-id-display">
           <small>Survey ID: <span id="surveyIdDisplay"></span></small>
         </div>
+        <div id="connectionStatus" class="connection-status" style="display: none;"></div>
       </header>
 
       <!-- 统计卡片 -->
@@ -70,6 +75,12 @@
         <button class="action-btn danger" onclick="clearAllData()">🗑️ 清空数据</button>
         <button class="action-btn primary" onclick="exportCSV()">💾 导出数据</button>
       </div>
+    </div>
+
+    <!-- 实时同步通知 -->
+    <div id="syncNotification" class="sync-notification" style="display: none;">
+      <span class="sync-icon">🔄</span>
+      <span class="sync-text">新数据已同步</span>
     </div>
 
     <footer class="footer">
