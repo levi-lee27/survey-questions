@@ -7,7 +7,6 @@ const QUESTIONS = [
 
 // 全局状态
 let currentSurveyId = ''
-let currentToken = ''
 let allRecords = []
 let filteredRecords = []
 let currentPage = 1
@@ -19,76 +18,43 @@ function getUrlParam(name) {
   return params.get(name)
 }
 
-// 显示面板
-function showPanel(panel) {
-  document.getElementById('authPanel').style.display = panel === 'auth' ? 'block' : 'none'
-  document.getElementById('statsPanel').style.display = panel === 'stats' ? 'block' : 'none'
-}
-
-// 验证 Token
-function verifyToken() {
-  const token = document.getElementById('adminToken').value.trim()
+// 直接加载并显示统计（无需密码验证）
+function loadStatistics() {
   const surveyId = getUrlParam('surveyId')
 
   if (!surveyId) {
-    showError('缺少 surveyId 参数')
+    alert('缺少 surveyId 参数，请通过问卷生成的链接访问')
+    window.location.href = 'generate.html'
     return
   }
 
-  // 检查 meta 中的密码
   const metaKey = 'survey_meta_' + surveyId
   const metaRaw = localStorage.getItem(metaKey)
+
   if (!metaRaw) {
-    showError('问卷不存在或尚未创建\n\n请先填写问卷，然后才能查看统计')
+    // meta 不存在，说明问卷尚未创建或 localStorage 被清空
+    // 显示友好提示
+    document.getElementById('surveyTitleDisplay').textContent = '问卷不存在'
+    document.getElementById('surveyIdDisplay').textContent = surveyId
+    document.getElementById('totalCount').textContent = '-'
+    document.getElementById('averageScore').textContent = '-'
+    document.getElementById('maxScore').textContent = '-'
+    document.getElementById('questionStats').innerHTML = '<div class="no-data-message">⚠️ 问卷不存在或尚未创建<br><br>请先访问 generate.html 创建问卷，然后填写提交。<br>注意：如果已经创建，请确保在同一浏览器中访问。</div>'
+    document.getElementById('recordsList').innerHTML = ''
     return
   }
 
   const meta = JSON.parse(metaRaw)
-
-  // 如果问卷没有设置密码，直接进入（不需要 token）
-  if (!meta.password) {
-    currentSurveyId = surveyId
-    currentToken = ''
-    document.getElementById('surveyTitleDisplay').textContent = meta.title || '未命名问卷'
-    document.getElementById('surveyIdDisplay').textContent = surveyId
-    showPanel('stats')
-    loadData()
-    return
-  }
-
-  // 有密码保护，必须提供 token
-  if (!token) {
-    showError('请输入管理员密码')
-    return
-  }
-
-  // 验证密码是否匹配
-  if (meta.password !== token) {
-    showError('密码错误\n\n请检查 generate.html 中设置的密码')
-    return
-  }
-
-  // 验证通过
   currentSurveyId = surveyId
-  currentToken = token
 
-  // 保存 meta 信息
   document.getElementById('surveyTitleDisplay').textContent = meta.title || '未命名问卷'
   document.getElementById('surveyIdDisplay').textContent = surveyId
 
-  showPanel('stats')
-  loadData()
-}
+  // 显示统计面板
+  document.getElementById('statsPanel').style.display = 'block'
 
-// 显示错误
-function showError(msg) {
-  const el = document.getElementById('authError')
-  if (el) {
-    el.textContent = msg
-    el.style.display = 'block'
-  } else {
-    alert(msg)
-  }
+  // 加载数据
+  loadData()
 }
 
 // 加载数据
@@ -109,20 +75,8 @@ function loadData() {
 
 // 监听筛选事件
 document.addEventListener('DOMContentLoaded', () => {
-  const surveyId = getUrlParam('surveyId')
-  if (!surveyId) {
-    showPanel('auth')
-    return
-  }
-
-  // 如果有 token 参数，直接验证
-  const token = getUrlParam('token')
-  if (token) {
-    document.getElementById('adminToken').value = token
-    setTimeout(() => verifyToken(), 100)
-  } else {
-    showPanel('auth')
-  }
+  // 直接加载统计数据（无需密码验证）
+  loadStatistics()
 
   // 绑定筛选事件
   document.getElementById('searchInput')?.addEventListener('input', debounce(handleFilter, 300))

@@ -8,25 +8,10 @@
 </head>
 <body>
   <div class="container">
-    <!-- 密码验证界面 -->
-    <div id="authPanel" class="auth-panel">
-      <div class="card">
-        <div class="auth-icon">🔐</div>
-        <h1>管理员验证</h1>
-        <p class="subtitle">请输入管理员密码查看统计数据</p>
-        <div class="form-group">
-          <label for="adminToken">管理员密码</label>
-          <input type="password" id="adminToken" placeholder="输入密码" onkeypress="if(event.key==='Enter')verifyToken()">
-        </div>
-        <button class="btn" onclick="verifyToken()">解锁统计</button>
-        <p class="error-msg" id="authError"></p>
-      </div>
-    </div>
-
     <!-- 统计面板（初始隐藏） -->
     <div id="statsPanel" class="stats-panel" style="display: none;">
       <header class="header">
-        <a href="index.html?surveyId={{SURVEY_ID}}" class="back-link">← 返回问卷</a>
+        <a href="index.html" class="back-link">← 返回问卷</a>
         <h1>📊 统计后台</h1>
         <p class="subtitle" id="surveyTitleDisplay">问卷标题</p>
         <div class="survey-id-display">
