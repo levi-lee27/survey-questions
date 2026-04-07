@@ -64,17 +64,30 @@ async function supabaseSaveSubmission(surveyId, submission) {
     }
 
     // 2. 更新 meta 统计（增加提交计数）
-    // 先获取当前计数
-    const { data: currentMeta } = await supabaseClient
-      .from('surveys')
-      .select('submission_count')
-      .eq('id', surveyId)
-      .single();
+    // 尝试获取当前计数，如果不存在则创建新记录
+    let currentCount = 0;
+    let metaError = null;
 
-    const currentCount = currentMeta?.submission_count || 0;
+    try {
+      const { data: currentMeta } = await supabaseClient
+        .from('surveys')
+        .select('submission_count')
+        .eq('id', surveyId)
+        .single();
+
+      currentCount = currentMeta?.submission_count || 0;
+    } catch (e) {
+      // 如果记录不存在 (PGRST116)，这是首次提交，正常情况
+      if (e.code !== 'PGRST116') {
+        console.warn('[Supabase] 查询 meta 失败:', e.message);
+        metaError = e.message;
+      }
+      // 继续处理，currentCount 保持为 0
+    }
+
     const newCount = currentCount + 1;
 
-    const { error: metaError } = await supabaseClient
+    const { error: updateError } = await supabaseClient
       .from('surveys')
       .upsert({
         id: surveyId,
@@ -82,8 +95,9 @@ async function supabaseSaveSubmission(surveyId, submission) {
         last_submission: submission.timestamp
       });
 
-    if (metaError) {
-      console.error('[Supabase] 更新 meta 失败:', metaError);
+    if (updateError) {
+      console.error('[Supabase] 更新 meta 失败:', updateError);
+      metaError = updateError.message;
     } else {
       console.log('[Supabase] 提交已保存，计数更新为:', newCount);
     }

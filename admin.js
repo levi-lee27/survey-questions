@@ -84,6 +84,8 @@ async function loadStatistics() {
 
 // 加载数据 - 支持 Supabase 实时订阅
 async function loadData() {
+  let loaded = false;
+
   // 如果 Supabase 可用，优先从 Supabase 加载
   if (typeof supabaseLoadSubmissions === 'function') {
     try {
@@ -93,51 +95,64 @@ async function loadData() {
       if (!supabaseUnsubscribe) {
         supabaseUnsubscribe = supabaseSubscribeToSurvey(currentSurveyId, (payload) => {
           console.log('[Supabase] 数据变更:', payload.eventType);
-          loadData(false);
+          reloadData();  // 使用重新加载函数，避免重复订阅
           showNotification('新提交已同步');
         });
       }
 
       // 加载所有数据
       const result = await supabaseLoadSubmissions(currentSurveyId);
-      if (!result.error && result.data) {
+      if (!result.error && result.data && result.data.length > 0) {
         allRecords = result.data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         console.log('[Supabase] 加载了', allRecords.length, '条记录');
+        loaded = true;
       } else {
-        allRecords = [];
-        console.log('[Supabase] 暂无数据或加载失败:', result.error);
+        // Supabase 无数据（空数组或错误），记录日志但继续尝试降级
+        console.log('[Supabase] 暂无数据或加载失败:', result.error || '空数据集');
+        loaded = false;
       }
-
-      filteredRecords = [...allRecords];
-      renderAll();
 
     } catch (error) {
       console.error('[Supabase] 加载失败，降级到 localStorage:', error);
-      loadLocalData();
+      loaded = false;
     }
-  } else {
-    // Supabase 未配置，使用 localStorage
+  }
+
+  // 如果 Supabase 未配置、加载失败或无数据，降级到 localStorage
+  if (!loaded) {
     loadLocalData();
+  } else {
+    filteredRecords = [...allRecords];
+    renderAll();
   }
 }
 
 // 重新加载（不重复订阅）
 async function reloadData() {
+  let loaded = false;
+
   if (typeof supabaseLoadSubmissions === 'function') {
     try {
       const result = await supabaseLoadSubmissions(currentSurveyId);
-      if (!result.error && result.data) {
+      if (!result.error && result.data && result.data.length > 0) {
         allRecords = result.data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        loaded = true;
       } else {
         allRecords = [];
+        loaded = false;
       }
-      filteredRecords = [...allRecords];
-      renderAll();
     } catch (error) {
       console.error('[Supabase] 重新加载失败:', error);
+      allRecords = [];
+      loaded = false;
     }
-  } else {
+  }
+
+  if (!loaded) {
     loadLocalData();
+  } else {
+    filteredRecords = [...allRecords];
+    renderAll();
   }
 }
 
