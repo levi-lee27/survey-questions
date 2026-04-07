@@ -475,3 +475,9 @@ window.addEventListener('beforeunload', () => {
     supabaseUnsubscribe();
   }
 });
+// 页面加载完成后自动加载统计数据
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadStatistics);
+  } else {
+    loadStatistics();
+  }
