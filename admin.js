@@ -469,15 +469,16 @@ window.exportCSV = exportCSV;
 window.clearAllData = clearAllData;
 window.closeModal = closeModal;
 
+// 页面加载完成后自动加载统计数据
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadStatistics);
+} else {
+  loadStatistics();
+}
+
 // 页面卸载时取消订阅
 window.addEventListener('beforeunload', () => {
   if (supabaseUnsubscribe) {
     supabaseUnsubscribe();
   }
 });
-// 页面加载完成后自动加载统计数据
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadStatistics);
-  } else {
-    loadStatistics();
-  }
