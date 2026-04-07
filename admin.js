@@ -196,12 +196,14 @@ function renderQuestionStats() {
 
   const stats = QUESTIONS.map(q => {
     let sum = 0
+    let count = 0
     allRecords.forEach(record => {
       if (record.answers[q.id] !== undefined) {
         sum += record.answers[q.id] * q.weight
+        count++
       }
     })
-    const avg = sum / allRecords.length
+    const avg = count > 0 ? sum / count : 0
     return {
       id: q.id,
       number: q.number,
