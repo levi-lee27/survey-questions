@@ -13,10 +13,10 @@
 // Supabase 项目的配置对象（必须替换成你自己的！）
 const supabaseConfig = {
   // ⬇️ 必填：从 Supabase Dashboard → Settings → API 复制的 URL
-  url: "https://your-project.supabase.co",
+  url: "https://ffzrmdygvnvcvokgooov.supabase.co",
 
   // ⬇️ 必填：匿名访问密钥（anon key）
-  anonKey: "eyJxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmenJtZHlndm52Y3Zva2dvb292Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDk3NzQsImV4cCI6MjA5MDc4NTc3NH0.ty5PLI37FEGbFzCFoNYcbN8wFF5ZQO3uF3HTKGYTyLk"
 };
 
 // 如果配置不完整，提示用户
