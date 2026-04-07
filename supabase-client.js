@@ -179,8 +179,21 @@ async function supabaseLoadSubmissions(surveyId) {
       return { data: [], error: error.message };
     }
 
-    console.log('[Supabase] 加载了', data.length, '条记录');
-    return { data, error: null };
+    // 字段名归一化：将下划线风格转换为驼峰风格，与 app.js 保存的格式一致
+    const normalizedData = (data || []).map(item => ({
+      id: item.id,  // 自增ID
+      submission_id: item.submission_id,
+      timestamp: item.timestamp,
+      answers: item.answers,
+      suggestion: item.suggestion || '',
+      totalScore: parseFloat(item.total_score) || 0, // 转换 total_score → totalScore
+      // 保留原始字段以便调试
+      survey_id: item.survey_id,
+      total_score: item.total_score
+    }));
+
+    console.log('[Supabase] 加载了', normalizedData.length, '条记录（已归一化字段名）');
+    return { data: normalizedData, error: null };
   } catch (error) {
     console.error('[Supabase] 加载异常:', error);
     return { data: [], error: error.message };
