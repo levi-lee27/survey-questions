@@ -208,8 +208,18 @@ async function handleSubmit(e) {
   }
 
   // 保存到当前 surveyId 的数据
-  if (!saveSurvey(currentSurveyId, surveyData)) {
-    alert('保存失败，请重试')
+  // 显示保存状态（用户反馈）
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">保存中...</span>';
+
+  const saveSuccess = await saveSurvey(currentSurveyId, surveyData);
+
+  // 恢复按钮状态
+  submitBtn.disabled = false;
+  submitBtn.innerHTML = '<span class="btn-icon">📤</span><span class="btn-text">提交评价</span>';
+
+  if (!saveSuccess) {
+    alert('保存失败，请检查网络连接或联系管理员')
     return
   }
 
